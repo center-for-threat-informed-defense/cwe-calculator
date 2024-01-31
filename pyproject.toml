@@ -1,17 +1,18 @@
 [tool.poetry]
-name = "cwe-calculator"
-version = "1.0.0"
-description = "TODO"
+name = "ec3"
+version = "0.2.0"
+description = "Environmental CWE CVSS Calculator (ec3)"
 authors = [
-    "TODO <todo@mitre.org>",
+    "drothenberg <drothenberg@mitre.org>",
 ]
 packages = [
-    { include = "cwe_calculator", from = "src" },
+    { include = "ec3", from = "src" },
 ]
 license = "Apache"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.10"
+nvdlib = "^0.7.6"
 
 [tool.poetry.group.dev.dependencies]
 bandit = "1.7.0"

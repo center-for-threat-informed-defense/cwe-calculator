@@ -1,22 +1,13 @@
 # CWE with Environmental CVSS Calculator
 
-<!-- TODO Put a one paragraph summary of the project here. -->
+The Environmental CWE CVSS Calculator (ec3) is used to calculate a mean CVSS score for a provided CWE Identifier. 
+Data from the [National Vulnerability Database](https://nvd.nist.gov/) (NVD) is pulled via the 2.0 API and stored for later re-use.
+Optional target date range parameters may be provided to limit the scope of obtained data.
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
-exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure
-dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt
-mollit anim id est laborum.
+This work was inspired by the methodologies used for calculating the 
+[CWE Top 25](https://cwe.mitre.org/top25/archive/2023/2023_methodology.html)
 
 **Table Of Contents:**
-
-<!--
-TODO The table of contents should include only h2-h6, NOT h1. The "Markdown All In One"
-extension for VS Code will update the TOC automatically for you:
-https://marketplace.visualstudio.com/items?itemName=yzhang.markdown-all-in-one
-Set the extension's TOC:Levels setting to "2..6"
--->
 
 - [Getting Started](#getting-started)
 - [Getting Involved](#getting-involved)
@@ -26,15 +17,15 @@ Set the extension's TOC:Levels setting to "2..6"
 
 ## Getting Started
 
-<!-- TODO Write one paragraph about how users should get started,
-     and update the table of resources below. -->
+Developers would first look to obtain an API key from the [NVD website](https://nvd.nist.gov/developers/request-an-api-key).
+Obtaining an API key enables improved performance during queries by raising the rate limits set by NVD. 
+An API key may be provided to ec3 using the `--key` or `--keyfile` parameters.
+The user is encouraged to research [CWE-1003](https://cwe.mitre.org/data/definitions/1003.html) 
+("Weaknesses for Simplified Mapping of Published Vulnerabilities"). This View is used by NVD for most of their 
+provided mappings and is more likely to appear
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud
-exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure
-dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt
-mollit anim id est laborum.
+
+
 
 | Resource        | Description              |
 | --------------- | ------------------------ |
@@ -42,19 +33,15 @@ mollit anim id est laborum.
 | [Resource 2](#) | Description of resource. |
 | [Resource 3](#) | Description of resource. |
 
+<!--
 ## Getting Involved
-
-<!-- TODO Add some bullets telling users how to get involved. -->
 
 There are several ways that you can get involved with this project and help
 advance threat-informed defense:
 
-- **Way to get involved 1.** Lorem ipsum dolor sit amet, consectetur adipiscing elit,
-  sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-- **Way to get involved 2.** Ut enim ad minim veniam, quis nostrud exercitation ullamco
-  laboris nisi ut aliquip ex ea commodo consequat.
-- **Way to get involved 3.** Duis aute irure dolor in reprehenderit in voluptate velit
-  esse cillum dolore eu fugiat nulla pariatur.
+- **Way to get involved 1.** 
+- **Way to get involved 2.** Contribute to the [nvdlib](https://github.com/Vehemont/nvdlib) project.
+-->
 
 ## Questions and Feedback
 

@@ -3,6 +3,7 @@ build/
 dist/
 sdist/
 *.egg-info/
+.coverage
 coverage.xml
 docs/_build/
 .mypy_cache/

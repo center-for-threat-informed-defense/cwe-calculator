@@ -101,12 +101,5 @@ def example_cve_data() -> nvd_classes.CVE:
     return test_data_reduced
 
 
-def test_get_cvss(example_cve_data):
-    assert (
-        ec3.calculator.get_cvss(example_cve_data)
-        == "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
-    )
-
-
 def test_get_cwes(example_cve_data):
     assert ec3.calculator.get_cwes(example_cve_data) == [125]

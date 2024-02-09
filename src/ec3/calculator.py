@@ -1,7 +1,7 @@
 """
 Environmental CWE CVSS Calculator (ec3)
-Calculate the average CVSS score for a specified CWE identifier, provided optional environmental modifiers.
-Utilizes data from NVD via the 2.0 API.
+Calculate the potential CVSS score for a specified CWE identifier, provided optional temporal/environmental modifiers.
+Utilizes data from the National Vulnerability Database (NVD) via the 2.0 API.
 
 Copyright (c) 2024 The MITRE Corporation. All rights reserved.
 """
@@ -11,15 +11,17 @@ import collections
 import csv
 import io
 import pickle
+import statistics
 from datetime import datetime, timedelta
 
 from nvdlib import classes as nvd_classes  # type: ignore
 from requests.exceptions import SSLError
 
+from ec3.cvss import Cvss31
 from ec3.updater import NvdUpdater
 
 # Default path for storing returned API data.
-data_default: str = "./data/nvd_loaded.pickle"
+data_default_file: str = "./data/nvd_loaded.pickle"
 
 # Default integer value for how many prior days to acquire data. Maximum value allowed is [ec3.updater.max_date_range]
 date_difference_default: int = 1
@@ -54,6 +56,15 @@ def parse_args() -> argparse.Namespace:
     (optional) key - A string value corresponding to the user's NVD API key. Usage improves API rate limits.
     (optional) keyfile - A string identifying a file that contains the NVD API key string.
 
+    Temporal modification metrics:
+    (optional) exploit_code_maturity - A string representing the exploit code maturity (E) metric.
+    (optional) remediation_level - A string representing the remediation level (RL) metric.
+    (optional) report_confidence - A string representing the report confidence (RC) metric.
+
+    Environmental modification metrics:
+    (optional) modified_confidentiality - A string representing the modified confidentiality (MC) metric.
+    (optional) modified_integrity - A string representing the modified integrity (MI) metric.
+    (optional) modified_availability - A string representing the modified availability (MA) metric.
     """
 
     parser = argparse.ArgumentParser(description="Environmental CWE CVSS Calculator")
@@ -72,19 +83,20 @@ def parse_args() -> argparse.Namespace:
         help="Path to the normalization CSV file to parse",
         type=str,
     )
-    parser.add_argument(
+    update_group = parser.add_argument_group(title="Related NVD API parameters")
+    update_group.add_argument(
         "--update",
         "-u",
         help="Flag to utilize the NVD API to refresh source data",
         action="store_true",
     )
-    parser.add_argument(
+    update_group.add_argument(
         "--target_range_start",
         help="Date of earliest NVD data desired. Date must be 1-1-2020 or after. Expected format is MM-DD-YYYY.",
         action="store",
         type=str,
     )
-    parser.add_argument(
+    update_group.add_argument(
         "--target_range_end",
         help="Date of most recent NVD data desired. Expected format is MM-DD-YYYY.",
         action="store",
@@ -93,7 +105,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--verbose", "-v", help="Verbose output", action="store_true")
 
     # Allow for a key or a keyfile but not both.
-    key_group = parser.add_mutually_exclusive_group()
+    key_group = update_group.add_mutually_exclusive_group()
     key_group.add_argument(
         "--key", action="store", default=None, type=str, help="NVD api_key string."
     )
@@ -104,6 +116,49 @@ def parse_args() -> argparse.Namespace:
         help="Filename containing NVD api_key string",
         type=str,
     )
+
+    # Allow for individual temporal CVSS metrics to be passed in.
+    temporal_group = parser.add_argument_group(title="Temporal Metrics")
+    temporal_group.add_argument(
+        "--exploit-code-maturity",
+        "-e",
+        help="Temporal exploit code maturity (E) metric. (Expected values: X, H, F, P, U)",
+        type=str,
+    )
+    temporal_group.add_argument(
+        "--remediation-level",
+        "-rl",
+        help="Temporal remediation level (RL) metric. (Expected values: X, U, W, T, O)",
+        type=str,
+    )
+    temporal_group.add_argument(
+        "--report-confidence",
+        "-rc",
+        help="Temporal report confidence (RC) metric. (Expected values: X, C, R, U)",
+        type=str,
+    )
+
+    # Allow for individual environmental modified impact CVSS metrics to be passed in.
+    environmental_group = parser.add_argument_group(title="Environmental Metrics")
+    environmental_group.add_argument(
+        "--modified-confidentiality",
+        "-mc",
+        help="Environmental modified confidentiality (MC) metric. (Expected values:  X, N, L, H)",
+        type=str,
+    )
+    environmental_group.add_argument(
+        "--modified-integrity",
+        "-mi",
+        help="Environmental modified integrity (MI) metric. (Expected values: X, N, L, H)",
+        type=str,
+    )
+    environmental_group.add_argument(
+        "--modified-availability",
+        "-ma",
+        help="Environmental modified availability (MA) metric. (Expected values: X, N, L, H)",
+        type=str,
+    )
+
     return parser.parse_args()
 
 
@@ -127,10 +182,8 @@ def load_nvd_data(pickle_file_str: str) -> list[nvd_classes.CVE]:
     except FileNotFoundError:
         print(f"Caught FileNotFoundError. Input file not found.")
         return []
-    except pickle.UnpicklingError as e:
-        print(
-            f"Caught UnpicklingError. Input file was not in correct pickle format. {e}"
-        )
+    except pickle.UnpicklingError:
+        print(f"Caught UnpicklingError. Input file was not in correct pickle format.")
         return []
 
 
@@ -168,9 +221,11 @@ def load_normalization_data(normalization_file_str: str, orig_id: int) -> int | 
                 if lines[0] == orig_id.__str__():
                     if lines[1] == "Other" or lines[1] == orig_id.__str__():
                         return None
+
+                    # Try to cast the normalized value column as an integer, return None if unable
                     try:
                         return int(lines[1])
-                    except:
+                    except ValueError:
                         return None
             return None
     except FileNotFoundError:
@@ -178,22 +233,6 @@ def load_normalization_data(normalization_file_str: str, orig_id: int) -> int | 
         return None
     except PermissionError:
         print("Caught PermissionError. Unable to open normalization file.")
-        return None
-
-
-def get_cvss(cve: nvd_classes.CVE) -> str | None:
-    """Returns the CVSS score (as a vector) from a single CVE.
-
-    :param cve: A dictionary from the list of CVEs loaded from the NVD data
-    :return CVSS 3.1 vector string if found, otherwise None
-    """
-
-    # Our CVE data must not be Rejected, and must contain a CVSS 3.1 vector.
-    if cve.vulnStatus == "Rejected" or not cve.metrics:
-        return None
-    try:
-        return cve.v31vector
-    except AttributeError:
         return None
 
 
@@ -284,9 +323,9 @@ def run() -> None:
     if not args.update and args.load_file is None:
         if args.verbose:
             print(
-                f"No load_file provided, and no update flag set. Loading default data from {data_default}"
+                f"No load_file provided, and no update flag set. Loading default data from {data_default_file}"
             )
-        args.load_file = data_default
+        args.load_file = data_default_file
 
     # If refresh flag passed in, pull new data
     if args.update:
@@ -301,9 +340,11 @@ def run() -> None:
         try:
             raw_cve_data = source_updater.pull_target_data()
             if args.verbose:
-                print(f"Saving data from API call to default file {data_default}...")
-            save_nvd_data(cve_data=raw_cve_data, pickle_file_str=data_default)
-        except SSLError as e:
+                print(
+                    f"Saving data from API call to default file {data_default_file}..."
+                )
+            save_nvd_data(cve_data=raw_cve_data, pickle_file_str=data_default_file)
+        except SSLError:
             print(f"Caught SSLError. Error connecting to NVD.")
             return None
         except PermissionError:
@@ -317,18 +358,41 @@ def run() -> None:
         raw_cve_data = load_nvd_data(args.load_file)
 
     # Dictionary that maps CWE ID to list of CVSS vectors
-    cwe_data: dict[int, list[str]] = collections.defaultdict(list)
+    cwe_data: dict[int, list[Cvss31]] = collections.defaultdict(list)
 
     # Populate the CWE dictionary and cve count
     cve_count = 0
     if raw_cve_data:
         for cve in raw_cve_data:
             cve_count += 1
-            cvss_score = get_cvss(cve)
-            if cvss_score is not None:
-                cwes_for_cve = get_cwes(cve)
-                for cwe in cwes_for_cve:
-                    cwe_data[cwe].append(cvss_score)
+            try:
+                if hasattr(cve, "v31vector"):
+                    base_cvss = Cvss31.from_cve(cve=cve)
+
+                    # Set optional temporal modifiers
+                    if args.exploit_code_maturity:
+                        base_cvss.set_e(args.exploit_code_maturity)
+                    if args.remediation_level:
+                        base_cvss.set_rl(args.remediation_level)
+                    if args.report_confidence:
+                        base_cvss.set_rc(args.report_confidence)
+
+                    # Set optional environmental modifiers
+                    if args.modified_confidentiality:
+                        base_cvss.set_mc(args.modified_confidentiality)
+                    if args.modified_integrity:
+                        base_cvss.set_mi(args.modified_integrity)
+                    if args.modified_availability:
+                        base_cvss.set_ma(args.modified_availability)
+                    # if args.exploit_code_maturity:
+                    #     print(f"found exploit code maturity value:{args.e}")
+
+                    cwes_for_cve = get_cwes(cve)
+                    for cwe in cwes_for_cve:
+                        cwe_data[cwe].append(base_cvss)
+            except ValueError:
+                print("Caught ValueError.")
+                raise
 
     # Display the number of CVE entries in the raw_cve_data
     if args.verbose:
@@ -354,10 +418,23 @@ def run() -> None:
         # Otherwise, report no mapping present.
         if normalization_id is not None and normalization_id > 0:
             if cwe_data[normalization_id]:
+                normalized_score_values: list[list[float]] = []
+                for x in cwe_data[normalization_id]:
+                    scores = [x.get_base_score(), x.get_environmental_score()]
+                    normalized_score_values.append(scores)
+
                 normalized_ec3_results: dict = {
                     "CWE": normalization_id,
                     "Count": len(cwe_data[normalization_id]),
-                    "CVSS Vectors": cwe_data[normalization_id],
+                    # "CVSS Vectors": cwe_data[normalization_id],
+                    # "CVSS Base Scores:": [item[0] for item in score_values],
+                    # "CVSS Environmental Scores:": [item[1] for item in score_values],
+                    "Average/Projected CVSS Base Score:": statistics.mean(
+                        [item[0] for item in normalized_score_values]
+                    ),
+                    "Average/Projected CVSS Environmental Score:": statistics.mean(
+                        [item[1] for item in normalized_score_values]
+                    ),
                 }
                 if args.verbose:
                     print(f"CWE data found for normalized ID {normalization_id}!")
@@ -365,10 +442,12 @@ def run() -> None:
                 normalized_ec3_results = {
                     "CWE": normalization_id,
                     "Count": 0,
-                    "CVSS Vectors": "N/A",
+                    "Average/Projected CVSS Base Score:": 0,
+                    "Average/Projected CVSS Environmental Score:": 0,
                 }
                 if args.verbose:
                     print(f"No normalized CWE data found for ID {normalization_id}!")
+
             print(normalized_ec3_results)
         else:
             if args.verbose:
@@ -376,18 +455,36 @@ def run() -> None:
 
     # Create an output format with all required information
     if cwe_data[cwe_id]:
+        score_values: list[list[float]] = []
+        for x in cwe_data[cwe_id]:
+            scores = [x.get_base_score(), x.get_environmental_score()]
+            score_values.append(scores)
+
         ec3_results: dict = {
             "CWE": cwe_id,
             "Count": len(cwe_data[cwe_id]),
-            "CVSS Vectors": cwe_data[cwe_id],
+            # "CVSS Vectors": cwe_data[cwe_id],
+            # "CVSS Base Scores:": [item[0] for item in score_values],
+            # "CVSS Environmental Scores:": [item[1] for item in score_values],
+            "Average/Projected CVSS Base Score:": statistics.mean(
+                [item[0] for item in score_values]
+            ),
+            "Average/Projected CVSS Environmental Score:": statistics.mean(
+                [item[1] for item in score_values]
+            ),
         }
         if args.verbose:
             print(f"CWE data found for requested ID {cwe_id}!")
     else:
         if args.verbose:
             print(f"No CWE data found for ID {cwe_id}!")
-        # list entry will not exist if no CWE's found with that ID.
-        ec3_results = {"CWE": cwe_id, "Count": 0, "CVSS Vectors": "N/A"}
+        # list entry will not exist if no CWEs found with that ID.
+        ec3_results = {
+            "CWE": cwe_id,
+            "Count": 0,
+            "Average/Projected CVSS Base Score:": 0,
+            "Average/Projected CVSS Environmental Score:": 0,
+        }
 
     print(ec3_results)
     return None

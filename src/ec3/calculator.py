@@ -1,7 +1,6 @@
 """
-Environmental CWE CVSS Calculator (ec3)
-Calculate the potential CVSS score for a specified CWE identifier, provided optional temporal/environmental modifiers.
-Utilizes data from the National Vulnerability Database (NVD) via the 2.0 API.
+The Environmental CWE CVSS Calculator (ec3) is used to calculate a potential CVSS score for a provided CWE
+Identifier. Data from the National Vulnerability Database(NVD) is pulled via the 2.0 API and stored for later re-use.
 
 Copyright (c) 2024 The MITRE Corporation. All rights reserved.
 """
@@ -18,33 +17,39 @@ from nvdlib import classes as nvd_classes  # type: ignore
 from requests.exceptions import SSLError
 
 from ec3.cvss import Cvss31
-from ec3.updater import NvdUpdater
+from ec3.collector import NvdCollector
 
 # Default path for storing returned API data.
 data_default_file: str = "./data/nvd_loaded.pickle"
 
-# Default integer value for how many prior days to acquire data. Maximum value allowed is [ec3.updater.max_date_range]
+# Default integer value for how many prior days to acquire data. Maximum value allowed is [ec3.collector.max_date_range]
 date_difference_default: int = 1
 
 
 class RestrictedUnpickler(pickle.Unpickler):
-    """Helper class to restrict the unpickler to just nvdlib.classes.CVE objects"""
+    """
+    Helper class to restrict the unpickler to just nvdlib.classes.CVE objects
+    """
 
     def find_class(self, module, name) -> nvd_classes.CVE:
-        """Overrides the default unpickler find_class method."""
+        """
+        Overrides the default unpickler find_class method.
+        Only permit nvdlib.classes.CVE to be loaded by the unpickler. For any other type raise an exception to stop
+        a potentially malicious module.
+        """
 
-        # Permit nvdlib.classes.CVE to be loaded and forbid everything else.
         if module == "nvdlib.classes" and name in {"CVE"}:
             return nvd_classes.CVE
         raise pickle.UnpicklingError(f"Found an illegal class: ({module}).({name})")
 
 
 def parse_args() -> argparse.Namespace:
-    """Create the argument parser and parse the arguments
+    """
+    Create the argument parser and parse the arguments
 
     Available arguments:
     (Required) cwe - An integer for the desired CWE to be calculated.
-    (optional) load_file - A string pointing to a pickle file that contains NVD JSON 2.0 data.
+    (optional) data_file - A string pointing to a pickle file that contains NVD JSON 2.0 data.
     (optional) normalize_file - A string pointing to a two column CSV file that contains the normalization data.
     (optional) update - A flag to signal a request to pull new data from NVD. Utilizes optional api_key,
     time_range_start, and time_range_end values if available.
@@ -70,17 +75,22 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Environmental CWE CVSS Calculator")
     parser.add_argument(
         "cwe",
-        help="CWE numerical identifier (e.g. 20 for CWE-20)",
+        help="CWE numerical identifier (e.g., 787 for CWE-787)",
         action="store",
         type=int,
     )
     parser.add_argument(
-        "--load_file", "-l", help="Path to the pickle file to parse", type=str
+        "--data_file",
+        "-d",
+        help="Path to the CVE data pickle file to parse",
+        action="store",
+        type=str,
     )
     parser.add_argument(
         "--normalize_file",
         "-n",
         help="Path to the normalization CSV file to parse",
+        action="store",
         type=str,
     )
     update_group = parser.add_argument_group(title="Related NVD API parameters")
@@ -102,18 +112,25 @@ def parse_args() -> argparse.Namespace:
         action="store",
         type=str,
     )
-    parser.add_argument("--verbose", "-v", help="Verbose output", action="store_true")
+    parser.add_argument(
+        "--verbose",
+        "-v",
+        help="Flag to enable verbose output.",
+        action="store_true",
+    )
 
     # Allow for a key or a keyfile but not both.
     key_group = update_group.add_mutually_exclusive_group()
     key_group.add_argument(
-        "--key", action="store", default=None, type=str, help="NVD api_key string."
+        "--key",
+        help="NVD api_key string.",
+        action="store",
+        type=str,
     )
     key_group.add_argument(
         "--keyfile",
-        action="store",
-        default=None,
         help="Filename containing NVD api_key string",
+        action="store",
         type=str,
     )
 
@@ -163,24 +180,30 @@ def parse_args() -> argparse.Namespace:
 
 
 def restricted_load(file_str) -> list[nvd_classes.CVE]:
-    """Helper function to restrict the loaded class type"""
+    """
+    Helper function to restrict the loaded class type
+    """
 
     return RestrictedUnpickler(io.FileIO(file_str)).load()
 
 
 def load_nvd_data(pickle_file_str: str) -> list[nvd_classes.CVE]:
-    """Load the pickle file containing the NVD data into a nvdlib.classes.CVE list that we can handle
-    params
+    """
+    Load the pickle file containing the NVD data into a nvdlib.classes.CVE list that we can handle.
+    If unable to load data from a file or file permissions are encountered, returns an empty list.
+    Otherwise, return the list of nvdlib's CVE objects previously saved.
+
     :param pickle_file_str: A path to the pickle file containing the NVD data to load
     :return list: A list of nvdlib.classes.CVE objects (or an empty list if an error is encountered)
     """
 
-    # If unable to load data from a file or file permissions are encountered, returns None.
-    # Otherwise, return the list of nvdlib's CVE objects previously saved.
     try:
         return restricted_load(pickle_file_str)
     except FileNotFoundError:
         print(f"Caught FileNotFoundError. Input file not found.")
+        return []
+    except PermissionError:
+        print(f"Caught FileNotFoundError. Unable to read data file.")
         return []
     except pickle.UnpicklingError:
         print(f"Caught UnpicklingError. Input file was not in correct pickle format.")
@@ -188,7 +211,9 @@ def load_nvd_data(pickle_file_str: str) -> list[nvd_classes.CVE]:
 
 
 def save_nvd_data(pickle_file_str: str, cve_data: list) -> None:
-    """Save JSON data returned from the NVD API into a pickle file that we can re-load without calling the API again.
+    """
+    Save JSON data returned from the NVD API into a pickle file that we can re-load without calling the API again.
+
     :param pickle_file_str: A filename to write the saved NVD JSON data in pickle format, preserving the NVD object.
     :param cve_data: Raw CVE data returned from NVD API. Schema 2.0.
     :return None
@@ -203,17 +228,19 @@ def save_nvd_data(pickle_file_str: str, cve_data: list) -> None:
 
 
 def load_normalization_data(normalization_file_str: str, orig_id: int) -> int | None:
-    """Load the normalization data CSV file and returns the first corresponding normalization CWE identifier.
+    """
+    Load the normalization data CSV file and returns the first corresponding normalization CWE identifier.
     The normalization file should only have one suggestion per CWE ID in the left column.
     The file may map an identifier to itself or "Other". Both of these cases should return None (no new normalization).
+
+    If unable to load data from a file, file permissions are encountered, or no lookup value is found, returns None.
+    Otherwise, return the integer lookup value for the orig_id to normalize to.
 
     :param normalization_file_str: A path to the CSV file containing the normalization data to load
     :param orig_id: An integer for the originally requested CWE identifier, which will be used in a lookup of the data.
     :return int: An integer of the found CWE identifier to map to, or None if no new valid normalization value is found.
     """
 
-    # If unable to load data from a file, file permissions are encountered, or no lookup value is found, returns None.
-    # Otherwise, return the integer lookup value for the orig_id to normalize to.
     try:
         with open(normalization_file_str, mode="r") as normalization_fh:
             normalization_file = csv.reader(normalization_fh)
@@ -319,31 +346,32 @@ def run() -> None:
     else:
         target_range_start = datetime.now() - timedelta(days=date_difference_default)
 
-    raw_cve_data: list[nvd_classes.CVE] = []
-    if not args.update and args.load_file is None:
+    # If args.data_file was not provided, then set it to data_default_file.
+    if args.data_file is None:
         if args.verbose:
             print(
-                f"No load_file provided, and no update flag set. Loading default data from {data_default_file}"
+                f"No data_file provided. Setting default data_file to {data_default_file}"
             )
-        args.load_file = data_default_file
+        args.data_file = data_default_file
 
-    # If refresh flag passed in, pull new data
+    raw_cve_data: list[nvd_classes.CVE] = []
+
+    # If the args.update flag was passed in, then pull the most recently modified data for the date range provided.
+    # Save the pulled source data to the specified or default [data_file] location
     if args.update:
         if args.verbose:
             print("Updating from NVD API...")
-        source_updater = NvdUpdater(
+        source_collector = NvdCollector(
             api_key=api_key,
             target_range_start=target_range_start,
             target_range_end=target_range_end,
             verbose=args.verbose,
         )
         try:
-            raw_cve_data = source_updater.pull_target_data()
+            raw_cve_data = source_collector.pull_target_data()
             if args.verbose:
-                print(
-                    f"Saving data from API call to default file {data_default_file}..."
-                )
-            save_nvd_data(cve_data=raw_cve_data, pickle_file_str=data_default_file)
+                print(f"Saving data from API call to data file...")
+            save_nvd_data(cve_data=raw_cve_data, pickle_file_str=args.data_file)
         except SSLError:
             print(f"Caught SSLError. Error connecting to NVD.")
             return None
@@ -351,11 +379,13 @@ def run() -> None:
             print(
                 "Caught PermissionError. Unable to write to pickle file. Continuing with data in memory."
             )
-    # Load the pre-saved CVE data from the pickle file
+
+    # We need to load some source of data from NVD into the raw_cve_data object. If we just performed an update, then
+    # this object already exists, so only perform the following load if we haven't done the update.
     else:
+        raw_cve_data = load_nvd_data(args.data_file)
         if args.verbose:
-            print("Loading input file ...")
-        raw_cve_data = load_nvd_data(args.load_file)
+            print("Update not requested, loaded existing data file.")
 
     # Dictionary that maps CWE ID to list of CVSS vectors
     cwe_data: dict[int, list[Cvss31]] = collections.defaultdict(list)
@@ -396,15 +426,15 @@ def run() -> None:
 
     # Display the number of CVE entries in the raw_cve_data
     if args.verbose:
-        print(f"Processed {cve_count} CVEs.")
+        print(f"Processed {cve_count} vulnerabilities.")
 
     # Get the input CWE. Make sure the ID is not negative.
     if args.cwe < 0:
+        cwe_id = abs(args.cwe)
         if args.verbose:
             print(
-                f"Input CWE was negative ({args.cwe}). Using the absolute value ({abs(args.cwe)}) instead."
+                f"Input CWE was negative ({args.cwe}). Used the absolute value ({abs(args.cwe)}) instead."
             )
-        cwe_id = abs(args.cwe)
     else:
         cwe_id = args.cwe
 
@@ -415,7 +445,6 @@ def run() -> None:
         )
 
         # If a valid integer mapping was found within the file, include the normalized results if available
-        # Otherwise, report no mapping present.
         if normalization_id is not None and normalization_id > 0:
             if cwe_data[normalization_id]:
                 normalized_score_values: list[list[float]] = []
@@ -424,36 +453,53 @@ def run() -> None:
                     normalized_score_values.append(scores)
 
                 normalized_ec3_results: dict = {
-                    "CWE": normalization_id,
-                    "Count": len(cwe_data[normalization_id]),
-                    # "CVSS Vectors": cwe_data[normalization_id],
-                    # "CVSS Base Scores:": [item[0] for item in score_values],
-                    # "CVSS Environmental Scores:": [item[1] for item in score_values],
-                    "Average/Projected CVSS Base Score:": statistics.mean(
-                        [item[0] for item in normalized_score_values]
-                    ),
-                    "Average/Projected CVSS Environmental Score:": statistics.mean(
+                    "Projected CVSS:": statistics.mean(
                         [item[1] for item in normalized_score_values]
-                    ),
-                }
+                    )
+                } | (
+                    {
+                        "CWE": normalization_id,
+                        "Count": len(cwe_data[normalization_id]),
+                        "Min CVSS Base Score:": min(
+                            [item[0] for item in normalized_score_values]
+                        ),
+                        "Max CVSS Base Score:": max(
+                            [item[0] for item in normalized_score_values]
+                        ),
+                        "Average CVSS Base Score:": statistics.mean(
+                            [item[0] for item in normalized_score_values]
+                        ),
+                    }
+                    if args.verbose
+                    else {}
+                )
+
                 if args.verbose:
-                    print(f"CWE data found for normalized ID {normalization_id}!")
+                    print(
+                        f"Vulnerability data found for normalized CWE ID {normalization_id}!"
+                    )
             else:
-                normalized_ec3_results = {
-                    "CWE": normalization_id,
-                    "Count": 0,
-                    "Average/Projected CVSS Base Score:": 0,
-                    "Average/Projected CVSS Environmental Score:": 0,
-                }
+                normalized_ec3_results = {"Projected CVSS:": 0} | (
+                    {
+                        "CWE": normalization_id,
+                        "Count": 0,
+                        "Min CVSS Base Score:": 0,
+                        "Max CVSS Base Score:": 0,
+                        "Average CVSS Base Score:": 0,
+                    }
+                    if args.verbose
+                    else {}
+                )
                 if args.verbose:
-                    print(f"No normalized CWE data found for ID {normalization_id}!")
+                    print(
+                        f"No vulnerability data found for normalized CWE ID {normalization_id}!"
+                    )
 
             print(normalized_ec3_results)
-        else:
-            if args.verbose:
-                print(f"No normalized CWE ID found for ID {cwe_id}!")
 
     # Create an output format with all required information
+    # score_values holds [base, environmental] calculated scores
+    # cwe_data is a dict that holds a list of Cvss31 objects indexed by the CWE ID
     if cwe_data[cwe_id]:
         score_values: list[list[float]] = []
         for x in cwe_data[cwe_id]:
@@ -461,30 +507,38 @@ def run() -> None:
             score_values.append(scores)
 
         ec3_results: dict = {
-            "CWE": cwe_id,
-            "Count": len(cwe_data[cwe_id]),
-            # "CVSS Vectors": cwe_data[cwe_id],
-            # "CVSS Base Scores:": [item[0] for item in score_values],
-            # "CVSS Environmental Scores:": [item[1] for item in score_values],
-            "Average/Projected CVSS Base Score:": statistics.mean(
-                [item[0] for item in score_values]
-            ),
-            "Average/Projected CVSS Environmental Score:": statistics.mean(
-                [item[1] for item in score_values]
-            ),
-        }
+            "Projected CVSS:": statistics.mean([item[1] for item in score_values])
+        } | (
+            {
+                "CWE": cwe_id,
+                "Count": len(cwe_data[cwe_id]),
+                "Min CVSS Base Score:": min([item[0] for item in score_values]),
+                "Max CVSS Base Score:": max([item[0] for item in score_values]),
+                "Average CVSS Base Score:": statistics.mean(
+                    [item[0] for item in score_values]
+                ),
+            }
+            if args.verbose
+            else {}
+        )
+
         if args.verbose:
-            print(f"CWE data found for requested ID {cwe_id}!")
+            print(f"Vulnerability data found for requested CWE ID {cwe_id}.")
     else:
         if args.verbose:
-            print(f"No CWE data found for ID {cwe_id}!")
+            print(f"No vulnerability data found for requested CWE ID {cwe_id}!")
         # list entry will not exist if no CWEs found with that ID.
-        ec3_results = {
-            "CWE": cwe_id,
-            "Count": 0,
-            "Average/Projected CVSS Base Score:": 0,
-            "Average/Projected CVSS Environmental Score:": 0,
-        }
+        ec3_results = {"Projected CVSS:": 0} | (
+            {
+                "CWE": cwe_id,
+                "Count": 0,
+                "Min CVSS Base Score:": 0,
+                "Max CVSS Base Score:": 0,
+                "Average CVSS Base Score:": 0,
+            }
+            if args.verbose
+            else {}
+        )
 
     print(ec3_results)
     return None

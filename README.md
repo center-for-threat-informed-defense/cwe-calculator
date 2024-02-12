@@ -10,12 +10,11 @@ This work was inspired by the methodologies used for calculating the
 **Table Of Contents:**
 
 - [Getting Started](#getting-started)
-
-<!-- - [Getting Involved](#getting-involved) -->
-
 - [Questions and Feedback](#questions-and-feedback)
 - [How Do I Contribute?](#how-do-i-contribute)
 - [Notice](#notice)
+
+<!-- - [Getting Involved](#getting-involved) -->
 
 ## Getting Started
 
@@ -27,6 +26,12 @@ An API key may be provided to ec3 using the `--key` or `--keyfile` parameters.
 The user is encouraged to research [CWE-1003](https://cwe.mitre.org/data/definitions/1003.html)
 ("Weaknesses for Simplified Mapping of Published Vulnerabilities"). This View is used by NVD for most of their
 provided mappings and is more likely to be used.
+
+### Installing ec3
+
+From your local directory containing ec3, run the following command to install the required dependencies:
+
+`pip install .`
 
 | Resource                                                                        | Description                                                                      |
 |---------------------------------------------------------------------------------|----------------------------------------------------------------------------------|

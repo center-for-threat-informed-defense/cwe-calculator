@@ -1,7 +1,7 @@
 """
 Utility class to handle the acquisition of source data.
 
-Currently only supports the NVD 2.0 API via the NvdUpdater class.
+Currently only supports the NVD 2.0 API via the NvdCollector class.
 
 Copyright (c) 2024 The MITRE Corporation. All rights reserved.
 """
@@ -15,7 +15,7 @@ from nvdlib import classes as nvd_classes  # type: ignore
 max_date_range: int = 120
 
 
-class NvdUpdater:
+class NvdCollector:
     """
     Wrapper class to obtain data from the NVD API via calls to nvdlib.
     Set available API parameters such as the api_key, lastModStartDate, and lastModEndDate
@@ -35,7 +35,7 @@ class NvdUpdater:
         verbose: bool = False,
     ) -> None:
         """
-        Initialize a NvdUpdater class instance using the provided parameters.
+        Initialize a NvdCollector class instance using the provided parameters.
 
         :param api_key: Defaults to None. If provided, this is used to improve the API rate limits.
         :param target_range_start: Defaults to one day ago from the current date and time. Represents the
@@ -55,13 +55,17 @@ class NvdUpdater:
 
         if self.verbose:
             print(
-                f"Initialized NvdUpdater to search CVEs from {self.target_range_start} until {self.target_range_end}."
+                f"Initialized NvdCollector to search CVEs from {self.target_range_start} until {self.target_range_end}."
             )
 
     def adjust_valid_dates(
         self, target_range_start: datetime, target_range_end: datetime
     ) -> list[datetime]:
         """
+        Utility function to adjust datetime values to more appropriate start and end ranges. The target_range_start
+        limit was determined on the basis that the CWE View 1003 was adjusted just before this time to coincide with the
+        2019 CWE Top 25 effort. This event marked the removal of Categories and changed the entries within the View.
+        Mapped CWE IDs prior to this have a higher potential to map to CWE Categories or contain less relevant mappings.
 
         :param target_range_start: A desired API start date and time. This class will restrict this value to be
         1/1/2020 at the earliest and be equal to the current date and time if provided a future date and time.
@@ -101,9 +105,10 @@ class NvdUpdater:
 
     def pull_target_data(self) -> list[nvd_classes.CVE]:
         """
-        Call the nvdlib.searchCVE API wrapper with the set nvd_updater class parameters.
+        Call the nvdlib.searchCVE API wrapper with the set NvdCollector class parameters.
         The nvdlib API call reaches out to 'https://services.nvd.nist.gov/rest/json/cves/2.0?'.
         SSL verification is enabled by default.
+
         :return: list of CVE objects
         """
 
@@ -162,5 +167,5 @@ class NvdUpdater:
 
 if __name__ == "__main__":
     # If called directly, initialize to default parameters and get updated data
-    source_updater = NvdUpdater()
-    raw_cve_data = source_updater.pull_target_data()
+    source_collector = NvdCollector()
+    raw_cve_data = source_collector.pull_target_data()

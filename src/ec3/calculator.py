@@ -16,8 +16,8 @@ from datetime import datetime, timedelta
 from nvdlib import classes as nvd_classes  # type: ignore
 from requests.exceptions import SSLError
 
-from ec3.cvss import Cvss31
 from ec3.collector import NvdCollector
+from ec3.cvss import Cvss31
 
 # Default path for storing returned API data.
 data_default_file: str = "./data/nvd_loaded.pickle"

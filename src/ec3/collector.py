@@ -14,6 +14,9 @@ from nvdlib import classes as nvd_classes  # type: ignore
 # Define the NVD 2.0 API's maximum number of days between parameter date ranges.
 max_date_range: int = 120
 
+# Default integer value for how many prior days to acquire data. Maximum value allowed is [ec3.collector.max_date_range]
+date_difference_default: int = 1
+
 
 class NvdCollector:
     """

@@ -102,4 +102,4 @@ def example_cve_data() -> nvd_classes.CVE:
 
 
 def test_get_cwes(example_cve_data):
-    assert ec3.calculator.get_cwes(example_cve_data) == [125]
+    assert ec3.calculator.Cvss31Calculator.get_cwes(example_cve_data) == [125]

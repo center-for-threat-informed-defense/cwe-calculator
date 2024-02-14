@@ -1,3 +1,10 @@
+"""
+Command line interface entry point for ec3. If called directly, obtains the arguments from the command line and
+coordinates the collector and calculator classes. Prints any results found.
+
+Copyright (c) 2024 The MITRE Corporation. All rights reserved.
+"""
+
 import argparse
 from datetime import datetime, timedelta
 

@@ -315,7 +315,6 @@ def main() -> None:
     # this object already exists, so only perform the following load if we haven't done the update.
     else:
         ec3_calculator.load_data_file(args.data_file)
-        ec3_calculator.get_cwes()
 
     # Include normalized results if present.
     if args.normalize_file:

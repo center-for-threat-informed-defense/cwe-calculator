@@ -13,6 +13,7 @@ license = "Apache"
 [tool.poetry.dependencies]
 python = "^3.10"
 nvdlib = "^0.7.6"
+mock = "^5.1.0"
 
 [tool.poetry.group.dev.dependencies]
 bandit = "1.7.0"

@@ -303,7 +303,6 @@ class Cvss31Calculator:
             )
 
         self.raw_cve_data = new_data
-        self.get_cwes()
 
         return None
 
@@ -439,6 +438,9 @@ class Cvss31Calculator:
         modifications. Verbose output includes min/max/mean base score CVSS values, count (of vulnerabilities mapped to
         the desired CWE ID), and the CWE ID used.
         """
+
+        # Update internal cwe data lookup dictionary from loaded vulnerability data.
+        self.get_cwes()
 
         # If called without an ID, default to using a normalized ID (if present), otherwise the default CWE ID.
         if cwe_id == 0:

@@ -1,6 +1,7 @@
 import pytest
-import ec3.calculator
 from nvdlib import classes as nvd_classes
+
+import ec3.calculator
 
 
 @pytest.fixture

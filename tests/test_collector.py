@@ -1,7 +1,11 @@
+from datetime import datetime, timedelta
+
+import nvdlib
 import pytest
-import ec3.collector
 from mock import Mock, patch
 from nvdlib import classes as nvd_classes
+
+import ec3.collector
 
 
 @pytest.fixture
@@ -203,8 +207,18 @@ def example_collector() -> ec3.collector.NvdCollector:
     return test_collector
 
 
-@patch.object(ec3.collector.NvdCollector, "pull_target_data")
-def test_pull_target_data(mock_pull_target_data):
-    mock_pull_target_data.return_value = example_cve_data
+@patch.object(nvdlib, "searchCVE")
+def test_search_cve(mock_search_cve):
+    mock_search_cve.return_value = example_cve_data
     tmp = ec3.collector.NvdCollector()
     assert tmp.pull_target_data() == example_cve_data
+
+
+def test_adjust_valid_dates():
+    test_collector = ec3.collector.NvdCollector(
+        target_range_start=datetime(1995, 10, 10, 0, 0, 0),
+        target_range_end=datetime(2200, 11, 11, 0, 0, 0),
+        verbose=True,
+    )
+    assert test_collector.target_range_start == datetime(2020, 1, 1, 0, 0, 0)
+    assert test_collector.target_range_end <= datetime.now()

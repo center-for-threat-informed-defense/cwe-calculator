@@ -113,6 +113,7 @@ def example_calculator(example_cve_data) -> ec3.calculator.Cvss31Calculator:
 
 
 def test_get_cwes(example_calculator):
+    example_calculator.get_cwes()
     assert example_calculator.cwe_data[125]
 
 

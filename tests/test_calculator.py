@@ -101,5 +101,34 @@ def example_cve_data() -> nvd_classes.CVE:
     return test_data_reduced
 
 
-def test_get_cwes(example_cve_data):
-    assert ec3.calculator.Cvss31Calculator.get_cwes(example_cve_data) == [125]
+@pytest.fixture
+def example_calculator(example_cve_data) -> ec3.calculator.Cvss31Calculator:
+    test_calculator = ec3.calculator.Cvss31Calculator(125)
+    test_calculator.set_vulnerability_data([example_cve_data])
+
+    return test_calculator
+
+
+def test_get_cwes(example_calculator):
+    assert example_calculator.cwe_data[125]
+    assert not example_calculator.cwe_data[126]
+
+
+def test_get_results(example_calculator):
+    assert example_calculator.get_results() == {"Projected CVSS": 7.5}
+    example_calculator.verbose = True
+    assert example_calculator.get_results() == {
+        "Projected CVSS": 7.5,
+        "CWE": 125,
+        "Count": 1,
+        "Min CVSS Base Score": 7.5,
+        "Max CVSS Base Score": 7.5,
+        "Average CVSS Base Score": 7.5,
+    }
+
+
+def test_set_score_modifiers(example_calculator):
+    assert example_calculator.get_results() == {"Projected CVSS": 7.5}
+    example_calculator.set_score_modifiers(mav="P", cr="H")
+    example_calculator.get_cwes()
+    assert example_calculator.get_results() == {"Projected CVSS": 6.4}

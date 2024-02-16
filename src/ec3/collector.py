@@ -47,6 +47,7 @@ class NvdCollector:
         to obtain data. This class will restrict this value to be equal to the current date and time if provided
         a future date and time.
         :param verbose: Defaults to False. A boolean flag to signal whether additional statements should be displayed.
+        :return None
         """
 
         self.verbose = verbose
@@ -76,6 +77,7 @@ class NvdCollector:
         to the current date and time if provided a future date and time.
         :return list[datetime]: A list of two datetimes representing the adjusted [target_range_start, target_range_end]
         """
+
         # Conduct date range validations: 1/1/2020 <= target_range_start <= target_range_end <= cur_date
         cur_date = datetime.now()
 
@@ -87,7 +89,7 @@ class NvdCollector:
         if cur_date < target_range_start:
             if self.verbose:
                 print(
-                    f"target_range_start is later than the current date and time. Adjusting to {cur_date}."
+                    f"target_range_start is later than the current date. Adjusting to {cur_date}."
                 )
             target_range_start = cur_date
 
@@ -104,6 +106,7 @@ class NvdCollector:
                     f"target_range_end is later than the current date and time. Adjusting to {cur_date}."
                 )
             target_range_end = cur_date
+
         return [target_range_start, target_range_end]
 
     def pull_target_data(self) -> list[nvd_classes.CVE]:

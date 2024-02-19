@@ -104,6 +104,32 @@ def example_cve_data() -> nvd_classes.CVE:
 
 
 @pytest.fixture
+def example_cve_data_rejected() -> nvd_classes.CVE:
+
+    # Using API return of CVE-2021-29633 for rejected example
+    test_data_rejected = nvd_classes.__convert(
+        product="cve",
+        CVEID={
+            "id": "CVE-2021-29633",
+            "sourceIdentifier": "secteam@freebsd.org",
+            "published": "2024-02-15T06:15:44.667",
+            "lastModified": "2024-02-15T06:15:44.667",
+            "vulnStatus": "Rejected",
+            "descriptions": [
+                {
+                    "lang": "en",
+                    "value": "Rejected reason: This candidate was in a CNA pool that was not assigned to any issues during 2021.",
+                }
+            ],
+            "metrics": {},
+            "references": [],
+        },
+    )
+
+    return test_data_rejected
+
+
+@pytest.fixture
 def example_calculator(example_cve_data) -> ec3.calculator.Cvss31Calculator:
 
     # Initialize a non-verbose Cvss31Calculator using example data
@@ -113,9 +139,37 @@ def example_calculator(example_cve_data) -> ec3.calculator.Cvss31Calculator:
     return test_calculator
 
 
+def test_init_verbose():
+    # Initialize a verbose Cvss31Calculator
+    test_calculator = ec3.calculator.Cvss31Calculator(125, True)
+    assert test_calculator.verbose == True
+
+
+def test_init_value_error():
+
+    # Cause a ValueError exception
+    with pytest.raises(ValueError):
+        # Initialize a non-verbose Cvss31Calculator with a bad numerical CWE ID value
+        test_calculator = ec3.calculator.Cvss31Calculator(-1)
+
+
+def test_cwe_id_valid_value_error(example_calculator):
+
+    # Cause a ValueError exception
+    with pytest.raises(ValueError):
+        # Pass a non-valid ID to the Cvss31Calculator constructor
+        test_calculator = ec3.calculator.Cvss31Calculator("BAD")
+
+
 def test_get_cwes(example_calculator):
     example_calculator.get_cwes()
     assert example_calculator.cwe_data[125]
+
+
+def test_get_cwes_rejected(example_calculator, example_cve_data_rejected):
+    example_calculator.set_vulnerability_data([example_cve_data_rejected])
+    example_calculator.get_cwes()
+    assert not example_calculator.cwe_data
 
 
 def test_get_cwes_empty(example_calculator):
@@ -192,9 +246,16 @@ def test_set_score_modifiers_all(example_calculator):
     assert example_calculator.get_results() == {"Projected CVSS": 4.3}
 
 
-def test_get_cwes_valueerror(example_calculator):
+def test_get_cwes_value_error(example_calculator):
 
     # Cause a ValueError exception
     with pytest.raises(ValueError):
         example_calculator.set_score_modifiers(mav="?")
         example_calculator.get_cwes()
+
+
+def test_set_vulnerability_data_type_error(example_calculator):
+
+    # Cause a TypeError exception
+    with pytest.raises(TypeError):
+        example_calculator.set_vulnerability_data(["abc", "def"])

@@ -110,11 +110,8 @@ class Cvss31Calculator:
 
         cwes: list[int] = []
 
-        # The CVE data must not be Rejected, and contain a CWE identifier. "cve.cwe" will not exist if no CWE is found.
-        try:
-            if cve.vulnStatus == "Rejected" or not cve.cwe:
-                return cwes
-        except AttributeError:
+        # The CVE data must not be Rejected, and contain a CWE identifier.
+        if cve.vulnStatus == "Rejected" or not hasattr(cve, "cwe"):
             return cwes
 
         # CVEs might have multiple CWE mappings and each mapping might contain space delimited CWEs.
@@ -295,7 +292,7 @@ class Cvss31Calculator:
         :return: None
         """
 
-        if not isinstance(new_data, list) and not (
+        if not isinstance(new_data, list) or not any(
             isinstance(record, nvd_classes.CVE) for record in new_data
         ):
             raise TypeError(

@@ -61,6 +61,7 @@ class NvdCollector:
             print(
                 f"Initialized NvdCollector to search CVEs from {self.target_range_start} until {self.target_range_end}."
             )
+            print()  # print blank line
 
     def adjust_valid_dates(
         self, target_range_start: datetime, target_range_end: datetime
@@ -130,8 +131,9 @@ class NvdCollector:
             if self.verbose:
                 print(
                     f"Target range {self.target_range_start} through {self.target_range_end} is larger than {max_date_range} days. "
-                    f"Splitting into multiple calls for a scrolling {max_date_range} day time range..."
+                    f"Splitting into multiple calls for a scrolling {max_date_range} day time range."
                 )
+                print()  # print blank line
             temp_range_start: datetime = self.target_range_start
             temp_range_end: datetime = self.target_range_start + timedelta(
                 days=max_date_range

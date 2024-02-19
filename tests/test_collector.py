@@ -210,15 +210,29 @@ def example_collector() -> ec3.collector.NvdCollector:
 @patch.object(nvdlib, "searchCVE")
 def test_search_cve(mock_search_cve):
     mock_search_cve.return_value = example_cve_data
-    tmp = ec3.collector.NvdCollector()
-    assert tmp.pull_target_data() == example_cve_data
+    test_collector = ec3.collector.NvdCollector()
+    assert test_collector.pull_target_data() == example_cve_data
 
 
-def test_adjust_valid_dates():
+def test_adjust_valid_dates_bounds():
+
+    # Test adjust_valid_dates with bounds beyond the expected range.
     test_collector = ec3.collector.NvdCollector(
         target_range_start=datetime(1995, 10, 10, 0, 0, 0),
         target_range_end=datetime(2200, 11, 11, 0, 0, 0),
         verbose=True,
     )
     assert test_collector.target_range_start == datetime(2020, 1, 1, 0, 0, 0)
+    assert test_collector.target_range_end <= datetime.now()
+
+
+def test_adjust_valid_dates_swap():
+
+    # Test adjust_valid_dates with bounds swapped and beyond expected ranges.
+    test_collector = ec3.collector.NvdCollector(
+        target_range_start=datetime(2200, 11, 11, 0, 0, 0),
+        target_range_end=datetime(1995, 10, 10, 0, 0, 0),
+        verbose=True,
+    )
+    assert test_collector.target_range_start <= datetime.now()
     assert test_collector.target_range_end <= datetime.now()

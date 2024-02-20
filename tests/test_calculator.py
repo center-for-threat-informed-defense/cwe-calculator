@@ -85,17 +85,6 @@ def example_cve_data() -> nvd_classes.CVE:
             "v31availabilityImpact": "NONE",
             "v31exploitability": 3.9,
             "v31impactScore": 3.6,
-            "v2score": 5.0,
-            "v2vector": "AV:N/AC:L/Au:N/C:P/I:N/A:N",
-            "v2severity": "MEDIUM",
-            "v2accessVector": "NETWORK",
-            "v2accessComplexity": "LOW",
-            "v2authentication": "NONE",
-            "v2confidentialityImpact": "PARTIAL",
-            "v2integrityImpact": "NONE",
-            "v2availabilityImpact": "NONE",
-            "v2exploitability": 10.0,
-            "v2impactScore": 2.9,
             "score": ["V31", 7.5, "HIGH"],
         },
     )
@@ -106,7 +95,7 @@ def example_cve_data() -> nvd_classes.CVE:
 @pytest.fixture
 def example_cve_data_rejected() -> nvd_classes.CVE:
 
-    # Using API return of CVE-2021-29633 for rejected example
+    # Using API return of CVE-2021-29633 for rejected example with metrics added
     test_data_rejected = nvd_classes.__convert(
         product="cve",
         CVEID={
@@ -121,8 +110,53 @@ def example_cve_data_rejected() -> nvd_classes.CVE:
                     "value": "Rejected reason: This candidate was in a CNA pool that was not assigned to any issues during 2021.",
                 }
             ],
-            "metrics": {},
-            "references": [],
+            "metrics": {
+                "cvssMetricV31": [
+                    {
+                        "source": "nvd@nist.gov",
+                        "type": "Primary",
+                        "cvssData": {
+                            "version": "3.1",
+                            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+                            "attackVector": "NETWORK",
+                            "attackComplexity": "LOW",
+                            "privilegesRequired": "NONE",
+                            "userInteraction": "NONE",
+                            "scope": "UNCHANGED",
+                            "confidentialityImpact": "HIGH",
+                            "integrityImpact": "NONE",
+                            "availabilityImpact": "NONE",
+                            "baseScore": 7.5,
+                            "baseSeverity": "HIGH",
+                        },
+                        "exploitabilityScore": 3.9,
+                        "impactScore": 3.6,
+                    }
+                ],
+            },
+            "weaknesses": [
+                {
+                    "source": "nvd@nist.gov",
+                    "type": "Primary",
+                    "description": [{"lang": "en", "value": "CWE-125"}],
+                }
+            ],
+            "cwe": [{"lang": "en", "value": "CWE-125"}],
+            "url": "https://nvd.nist.gov/vuln/detail/CVE-2014-0160",
+            "v31score": 7.5,
+            "v31vector": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N",
+            "v31severity": "HIGH",
+            "v31attackVector": "NETWORK",
+            "v31attackComplexity": "LOW",
+            "v31privilegesRequired": "NONE",
+            "v31userInteraction": "NONE",
+            "v31scope": "UNCHANGED",
+            "v31confidentialityImpact": "HIGH",
+            "v31integrityImpact": "NONE",
+            "v31availabilityImpact": "NONE",
+            "v31exploitability": 3.9,
+            "v31impactScore": 3.6,
+            "score": ["V31", 7.5, "HIGH"],
         },
     )
 

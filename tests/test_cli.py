@@ -151,6 +151,16 @@ def example_collector_args() -> list[str]:
     return collector_args
 
 
+@pytest.fixture
+def example_simple_collector_args() -> list[str]:
+    simple_collector_args = [
+        "125",
+        "--update",
+    ]
+
+    return simple_collector_args
+
+
 def test_args_simple(example_simple_args):
     args = ec3.cli.parse_args(example_simple_args)
     assert args.cwe == 125
@@ -176,4 +186,14 @@ def test_main_collector(
     assert str(captured.out).__contains__(
         "Initialized NvdCollector to search CVEs from 2024-01-01 00:00:00 until 2024-02-01 00:00:00."
     )
+    assert str(captured.out).__contains__("Projected CVSS = 7.5")
+
+
+@patch.object(ec3.collector.NvdCollector, "pull_target_data")
+def test_main_simple_collector(
+    mock_pulled_data, capsys, example_simple_collector_args, example_cve_data
+):
+    mock_pulled_data.return_value = [example_cve_data]
+    ec3.cli.main(example_simple_collector_args)
+    captured = capsys.readouterr()
     assert str(captured.out).__contains__("Projected CVSS = 7.5")

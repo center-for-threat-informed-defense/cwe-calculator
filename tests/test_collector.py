@@ -105,10 +105,24 @@ def example_collector() -> ec3.collector.NvdCollector:
 
 
 @patch.object(nvdlib, "searchCVE")
-def test_search_cve(mock_search_cve):
-    mock_search_cve.return_value = example_cve_data
+def test_search_cve(mock_search_cve, example_cve_data):
+    mock_search_cve.return_value = [example_cve_data]
     test_collector = ec3.collector.NvdCollector()
-    assert test_collector.pull_target_data() == example_cve_data
+    assert test_collector.pull_target_data() == [example_cve_data]
+
+
+@patch.object(nvdlib, "searchCVE")
+def test_search_cve_scrolling(mock_search_cve, example_cve_data):
+    mock_search_cve.return_value = [example_cve_data]
+    test_collector = ec3.collector.NvdCollector(
+        target_range_start=datetime.now()
+        - timedelta(days=ec3.collector.max_date_range + 1),
+        target_range_end=datetime.now(),
+    )
+
+    # Results will contain two instances of example_cve_data since the scrolling window
+    # was set to one day past the max_date_range
+    assert test_collector.pull_target_data() == [example_cve_data, example_cve_data]
 
 
 def test_adjust_valid_dates_bounds():

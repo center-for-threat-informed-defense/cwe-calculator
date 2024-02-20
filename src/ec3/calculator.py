@@ -96,6 +96,7 @@ class Cvss31Calculator:
             return cwe_id is not None and int(cwe_id) > 0
         except ValueError:
             print("Caught ValueError. CWE ID provided was not a usable ID.")
+            print()  # print blank line
 
         return False
 

@@ -197,6 +197,8 @@ class Cvss31:
 
         except ValueError:
             print("Caught ValueError. Error while initializing Cvss31 values.")
+            print()  # print blank line
+            raise
 
     @classmethod
     def from_cve(cls, cve: nvd_classes.CVE):
@@ -215,6 +217,8 @@ class Cvss31:
             print(
                 "Caught ValueError. Error while initializing Cvss31 values from CVE object."
             )
+            print()  # print blank line
+            raise
 
     def __repr__(self) -> str:
         """Returns the textual representation of the ec3 CVSS object. This is the full vector format."""

@@ -14,11 +14,11 @@ from datetime import datetime, timedelta
 from nvdlib import classes as nvd_classes  # type: ignore
 from requests.exceptions import SSLError
 
-from ec3.calculator import Cvss31Calculator, data_default_file
+from ec3.calculator import Cvss31Calculator
 from ec3.collector import NvdCollector, date_difference_default
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     """
     Create the argument parser and parse the arguments
 
@@ -54,6 +54,7 @@ def parse_args() -> argparse.Namespace:
     (optional) modified_integrity - A string representing the modified integrity (MI) metric.
     (optional) modified_availability - A string representing the modified availability (MA) metric.
 
+    :param arg_list: Optional input argument list.
     :return argparse.Namespace object holding all attributes provided.
     """
 
@@ -209,18 +210,20 @@ def parse_args() -> argparse.Namespace:
         type=str,
     )
 
-    return parser.parse_args()
+    # If arg_list not provided, sys.argv is used by default.
+    return parser.parse_args(arg_list)
 
 
-def main() -> None:
+def main(arg_list: list[str] | None = None) -> None:
     """
     This function orchestrates the collection and evaluation of NVD vulnerability data using ec3 classes.
 
+    :param arg_list: Optional input argument list to pass to parse_args.
     :return: None
     """
 
     # Parse CLI arguments
-    args = parse_args()
+    args = parse_args(arg_list)
     if args.verbose:
         print("*** Environmental CWE CVSS Calculator (ec3) ***")
         print()  # print blank line

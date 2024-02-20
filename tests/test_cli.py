@@ -1,18 +1,18 @@
-from datetime import datetime, timedelta
-
-import nvdlib
 import pytest
-from mock import patch
-from nvdlib import classes as nvd_classes
 
+import ec3.cli
 import ec3.collector
+import ec3.calculator
+from mock import patch
+from datetime import datetime, timedelta
+from nvdlib import classes as nvd_classes
 
 
 @pytest.fixture
 def example_cve_data() -> nvd_classes.CVE:
 
     # Using API return of Heartbleed CVE as an example, some unrelated fields have been selectively removed.
-    test_data = nvd_classes.__convert(
+    test_data_reduced = nvd_classes.__convert(
         product="cve",
         CVEID={
             "id": "CVE-2014-0160",
@@ -89,47 +89,91 @@ def example_cve_data() -> nvd_classes.CVE:
             "v31availabilityImpact": "NONE",
             "v31exploitability": 3.9,
             "v31impactScore": 3.6,
+            "v2score": 5.0,
+            "v2vector": "AV:N/AC:L/Au:N/C:P/I:N/A:N",
+            "v2severity": "MEDIUM",
+            "v2accessVector": "NETWORK",
+            "v2accessComplexity": "LOW",
+            "v2authentication": "NONE",
+            "v2confidentialityImpact": "PARTIAL",
+            "v2integrityImpact": "NONE",
+            "v2availabilityImpact": "NONE",
+            "v2exploitability": 10.0,
+            "v2impactScore": 2.9,
             "score": ["V31", 7.5, "HIGH"],
         },
     )
 
-    return test_data
+    return test_data_reduced
 
 
 @pytest.fixture
-def example_collector() -> ec3.collector.NvdCollector:
+def example_simple_args() -> list[str]:
 
-    # Initialize a non-verbose NvdCollector with no parameters.
-    test_collector = ec3.collector.NvdCollector()
-    return test_collector
+    # default non-verbose call to calculator.
+    simple_args = ["125"]
 
-
-@patch.object(nvdlib, "searchCVE")
-def test_search_cve(mock_search_cve):
-    mock_search_cve.return_value = example_cve_data
-    test_collector = ec3.collector.NvdCollector()
-    assert test_collector.pull_target_data() == example_cve_data
+    return simple_args
 
 
-def test_adjust_valid_dates_bounds():
+@pytest.fixture
+def example_normalized_modified_args() -> list[str]:
+    normalized_modified_args = [
+        "121",
+        "--data_file",
+        ".\\data\\nvd_loaded.pickle",
+        "--normalize_file",
+        ".\\data\\normalized.csv",
+        "-v",
+        "-e",
+        "H",
+        "-mi",
+        "L",
+    ]
 
-    # Test adjust_valid_dates with bounds beyond the expected range.
-    test_collector = ec3.collector.NvdCollector(
-        target_range_start=datetime(1995, 10, 10, 0, 0, 0),
-        target_range_end=datetime(2200, 11, 11, 0, 0, 0),
-        verbose=True,
+    return normalized_modified_args
+
+
+@pytest.fixture
+def example_collector_args() -> list[str]:
+    collector_args = [
+        "125",
+        "--update",
+        "--key",
+        "test_api_key",
+        "--target_range_start",
+        "01-01-2024",
+        "--target_range_end",
+        "02-01-2024",
+        "-v",
+    ]
+
+    return collector_args
+
+
+def test_args_simple(example_simple_args):
+    args = ec3.cli.parse_args(example_simple_args)
+    assert args.cwe == 125
+
+
+def test_args_normalized_modified(example_normalized_modified_args):
+    args = ec3.cli.parse_args(example_normalized_modified_args)
+    assert args.cwe == 121
+    assert args.normalize_file is not None
+    assert args.data_file is not None
+    assert args.verbose
+    assert args.exploit_code_maturity == "H"
+    assert args.modified_integrity == "L"
+
+
+@patch.object(ec3.collector.NvdCollector, "pull_target_data")
+def test_main_collector(
+    mock_pulled_data, capsys, example_collector_args, example_cve_data
+):
+    mock_pulled_data.return_value = [example_cve_data]
+    ec3.cli.main(example_collector_args)
+    captured = capsys.readouterr()
+    assert str(captured.out).__contains__(
+        "Initialized NvdCollector to search CVEs from 2024-01-01 00:00:00 until 2024-02-01 00:00:00."
     )
-    assert test_collector.target_range_start == datetime(2020, 1, 1, 0, 0, 0)
-    assert test_collector.target_range_end <= datetime.now()
-
-
-def test_adjust_valid_dates_swap():
-
-    # Test adjust_valid_dates with bounds swapped and beyond expected ranges.
-    test_collector = ec3.collector.NvdCollector(
-        target_range_start=datetime(2200, 11, 11, 0, 0, 0),
-        target_range_end=datetime(1995, 10, 10, 0, 0, 0),
-        verbose=True,
-    )
-    assert test_collector.target_range_start <= datetime.now()
-    assert test_collector.target_range_end <= datetime.now()
+    assert str(captured.out).__contains__("Projected CVSS = 7.5")

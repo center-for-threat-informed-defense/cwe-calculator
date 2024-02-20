@@ -229,8 +229,13 @@ def test_set_score_modifiers(example_calculator):
 def test_set_score_modifiers_all(example_calculator):
 
     # Override all metric values.
-    # CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N/CR:H/IR:M/AR:M/MAV:P/MAC:L/MPR:L/MUI:R/MS:U/MC:L/MI:L/MA:L
+    # CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N/
+    #   E:F/RL:U/RC:R/
+    #   CR:H/IR:M/AR:M/MAV:P/MAC:L/MPR:L/MUI:R/MS:U/MC:L/MI:L/MA:L
     example_calculator.set_score_modifiers(
+        e="F",
+        rl="U",
+        rc="R",
         cr="H",
         ir="M",
         ar="M",
@@ -243,7 +248,7 @@ def test_set_score_modifiers_all(example_calculator):
         mi="L",
         ma="L",
     )
-    assert example_calculator.get_results() == {"Projected CVSS": 4.3}
+    assert example_calculator.get_results() == {"Projected CVSS": 4.1}
 
 
 def test_get_cwes_value_error(example_calculator):

@@ -171,9 +171,3 @@ class NvdCollector:
             )
 
         return cve_search
-
-
-if __name__ == "__main__":
-    # If called directly, initialize to default parameters and get updated data
-    source_collector = NvdCollector()
-    raw_cve_data = source_collector.pull_target_data()

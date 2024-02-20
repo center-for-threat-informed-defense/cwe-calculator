@@ -118,6 +118,7 @@ def test_search_cve_scrolling(mock_search_cve, example_cve_data):
         target_range_start=datetime.now()
         - timedelta(days=ec3.collector.max_date_range + 1),
         target_range_end=datetime.now(),
+        verbose=True,
     )
 
     # Results will contain two instances of example_cve_data since the scrolling window

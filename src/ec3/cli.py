@@ -332,7 +332,7 @@ def main(arg_list: list[str] | None = None) -> None:
     return None
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     """
     This is the ec3.calculator entry point when run as a standalone application. The __main__ section logic check is in
     place for when ec3 will be executed directly as a script."

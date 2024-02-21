@@ -264,6 +264,11 @@ class Cvss31Calculator:
                                 and lines[1] != self.cwe_id.__str__()
                             ):
                                 self.normalized_id = int(lines[1])
+                                if self.verbose:
+                                    print(
+                                        f"CWE ID {self.cwe_id} matched normalization ID {self.normalized_id}."
+                                    )
+                                    print()  # print blank line
                                 return None
                         except ValueError:
                             print(

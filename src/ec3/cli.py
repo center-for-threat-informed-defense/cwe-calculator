@@ -313,6 +313,9 @@ def main(arg_list: list[str] | None = None) -> None:
             print(
                 "Caught FileNotFoundError. Desired data file path is not writeable. Unable to save data."
             )
+        except:
+            print("Caught other error while collecting and saving NVD data. Exiting.")
+            return None
 
     # We need to load some source of data from NVD into the raw_cve_data object. If we just performed an update, then
     # this object already exists, so only perform the following load if we haven't done the update.

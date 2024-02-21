@@ -7,6 +7,8 @@ stored for later re-use. Optional target date range parameters may be provided t
 This work was inspired by the methodologies used for calculating the
 [CWE Top 25](https://cwe.mitre.org/top25/archive/2023/2023_methodology.html)
 
+[![codecov](https://codecov.io/gh/center-for-threat-informed-defense/cwe-calculator/graph/badge.svg?token=3RTp6e74Oh)](https://codecov.io/gh/center-for-threat-informed-defense/cwe-calculator)
+
 **Table Of Contents:**
 
 - [Getting Started](#getting-started)
@@ -32,6 +34,22 @@ provided mappings and is more likely to be used.
 From your local directory containing ec3, run the following command to install the required dependencies:
 
 `pip install .`
+
+### Running ec3
+
+You may see all the available command line flags by running the following from the project root:
+
+`python ./src/ec3/cli.py --help`
+
+Some examples of common commands would include:
+
+`python ./src/ec3/cli.py 787`
+
+`python ./src/ec3/cli.py 121 -v`
+
+`python ./src/ec3/cli.py 121 --normalize_file ./data/normalized.csv -v`
+
+`python ./src/ec3/cli.py 787 -e U -mpr H -v`
 
 | Resource                                                                        | Description                                                                      |
 |---------------------------------------------------------------------------------|----------------------------------------------------------------------------------|

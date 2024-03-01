@@ -2,14 +2,15 @@
 The Environmental CWE CVSS Calculator (ec3) is used to calculate a potential CVSS score for a provided CWE
 Identifier. Data from the National Vulnerability Database(NVD) is pulled via the 2.0 API and stored for later re-use.
 
-This is the command line interface entry point for ec3. If called directly, obtains the arguments from the command line and
-coordinates the collector and calculator classes. Prints any results found.
+This is the command line interface entry point for ec3. When called, it obtains the arguments from the command line and
+initializes the collector and calculator classes. When completed it prints any results found.
 
 Copyright (c) 2024 The MITRE Corporation. All rights reserved.
 """
 
 import argparse
 from datetime import datetime, timedelta
+import pathlib
 
 from nvdlib import classes as nvd_classes  # type: ignore
 from requests.exceptions import SSLError
@@ -64,20 +65,21 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         help="CWE numerical identifier (e.g., 787 for CWE-787)",
         action="store",
         type=int,
+        required=True
     )
     parser.add_argument(
         "--data_file",
         "-d",
         help="Path to the CVE data pickle file to parse",
         action="store",
-        type=str,
+        type=pathlib.Path,
     )
     parser.add_argument(
         "--normalize_file",
         "-n",
         help="Path to the normalization CSV file to parse",
         action="store",
-        type=str,
+        type=pathlib.Path,
     )
     update_group = parser.add_argument_group(title="Related NVD API parameters")
     update_group.add_argument(
@@ -117,7 +119,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         "--keyfile",
         help="Filename containing NVD api_key string",
         action="store",
-        type=str,
+        type=pathlib.Path,
     )
 
     # Allow for individual temporal CVSS metrics to be passed in.
@@ -127,18 +129,21 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         "-e",
         help="Temporal exploit code maturity (E) metric. (Expected values: X, H, F, P, U)",
         type=str,
+        choices=['X', 'H', 'F', 'P', 'U']
     )
     temporal_group.add_argument(
         "--remediation_level",
         "-rl",
         help="Temporal remediation level (RL) metric. (Expected values: X, U, W, T, O)",
         type=str,
+        choices=['X', 'U', 'W', 'T', 'O']
     )
     temporal_group.add_argument(
         "--report_confidence",
         "-rc",
         help="Temporal report confidence (RC) metric. (Expected values: X, C, R, U)",
         type=str,
+        choices=['X', 'C', 'R', 'U']
     )
 
     # Allow for individual environmental modified impact CVSS metrics to be passed in.
@@ -148,69 +153,82 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         "-cr",
         help="Environmental confidentiality requirement (CR) metric. (Expected values:  X, H, M, L)",
         type=str,
+        choices=['X', 'H', 'M', 'L']
     )
     environmental_group.add_argument(
         "--integrity_requirement",
         "-ir",
-        help="Environmental integrity requirement (IR) metric. (Expected values:  X. H, M, L)",
+        help="Environmental integrity requirement (IR) metric. (Expected values:  X, H, M, L)",
         type=str,
+        choices=['X', 'H', 'M', 'L']
     )
     environmental_group.add_argument(
         "--availability_requirement",
         "-ar",
         help="Environmental availability requirement (AR) metric. (Expected values:  X, H, M, L)",
         type=str,
+        choices=['X', 'H', 'M', 'L']
     )
     environmental_group.add_argument(
         "--modified_attack_vector",
         "-mav",
         help="Environmental modified attack complexity (MAC) metric. (Expected values:  X, N, A, L, P)",
         type=str,
+        choices=['X', 'N', 'A', 'L', 'P']
     )
     environmental_group.add_argument(
         "--modified_attack_complexity",
         "-mac",
         help="Environmental modified attack complexity (MAC) metric. (Expected values:  X, L, H)",
         type=str,
+        choices=['X', 'L', 'H']
     )
     environmental_group.add_argument(
         "--modified_privileges_required",
         "-mpr",
         help="Environmental modified privileges required (MPR) metric. (Expected values:  X, N, L, H)",
         type=str,
+        choices=['X', 'N', 'L', 'H']
     )
     environmental_group.add_argument(
         "--modified_user_interaction",
         "-mui",
         help="Environmental modified user interaction (MUI) metric. (Expected values:  X, N, R)",
         type=str,
+        choices=['X', 'N', 'R']
     )
     environmental_group.add_argument(
         "--modified_scope",
         "-ms",
         help="Environmental modified scope (MS) metric. (Expected values:  X, U, C)",
         type=str,
+        choices=['X', 'U', 'C']
     )
     environmental_group.add_argument(
         "--modified_confidentiality",
         "-mc",
         help="Environmental modified confidentiality (MC) metric. (Expected values:  X, N, L, H)",
         type=str,
+        choices=['X', 'N', 'L', 'H']
     )
     environmental_group.add_argument(
         "--modified_integrity",
         "-mi",
         help="Environmental modified integrity (MI) metric. (Expected values: X, N, L, H)",
         type=str,
+        choices=['X', 'N', 'L', 'H']
     )
     environmental_group.add_argument(
         "--modified_availability",
         "-ma",
         help="Environmental modified availability (MA) metric. (Expected values: X, N, L, H)",
         type=str,
+        choices=['X', 'N', 'L', 'H']
     )
 
-    # If arg_list not provided, sys.argv is used by default.
+    # The argparse class' parse_args function will use interpret a list of strings as the provided parameters.
+    # If this list of inputs is not explicitly provided, then the default behavior is to use sys.argv (the list
+    # of arguments passed to the called python script) as this list of string inputs.
     return parser.parse_args(arg_list)
 
 
@@ -247,24 +265,25 @@ def main(arg_list: list[str] | None = None) -> None:
     # automatically handles ranges larger than the ec3.collector.max_date_range global variable. Expected date
     # format is MM - DD - YYYY.
 
-    # If not present, set to current date and time minus the ec3.collector.date_difference_default global variable.
+    # If the target_range_start is not provided then set it to the current date minus the
+    # [ec3.collector.date_difference_default] global variable. If the target_range_end is not provided then set it to
+    # the current date.
+
     if args.target_range_start:
         target_range_start = datetime.strptime(args.target_range_start, "%m-%d-%Y")
     else:
         target_range_start = datetime.now() - timedelta(days=date_difference_default)
-
-    # If not present, set to current date and time.
     if args.target_range_end:
         target_range_end = datetime.strptime(args.target_range_end, "%m-%d-%Y")
     else:
         target_range_end = datetime.now()
 
-    # Initialize the calculator class instance. This calculator may now load/save vulnerability data, modify temporal
+    # Initialize the calculator class instance. This calculator is used to load/save vulnerability data, modify temporal
     # and environmental metrics, and obtain results for desired CWE IDs.
     ec3_calculator = Cvss31Calculator(cwe_id=args.cwe, verbose=args.verbose)
 
-    # If a temporal or environmental metric flag was not passed in, it would default to None.
-    # For each metric modifier: either use the passed in value, or "X" if not set
+    # If a temporal or environmental metric flag was not passed in through the CLI args, it would default to None.
+    # For each metric modifier: either use the passed in value, or "X" if not set.
     ec3_calculator.set_score_modifiers(
         e=args.exploit_code_maturity if args.exploit_code_maturity else "X",
         rl=args.remediation_level if args.remediation_level else "X",
@@ -287,7 +306,7 @@ def main(arg_list: list[str] | None = None) -> None:
     )
 
     # If the args.update flag was passed in, then pull the most recently modified data for the date range provided.
-    # Save the pulled source data to the specified or default [data_file] location
+    # Save the pulled source data to the specified or default [data_file] location.
     if args.update:
         if args.verbose:
             print("Updating from NVD API...")
@@ -307,22 +326,26 @@ def main(arg_list: list[str] | None = None) -> None:
             return None
         except PermissionError:
             print(
-                "Caught PermissionError. Unable to write to pickle file. Continuing with data in memory."
+                "Caught PermissionError. "
+                "Unable to save NVD data to a file. Continuing with data temporarily stored in memory"
             )
         except FileNotFoundError:
             print(
                 "Caught FileNotFoundError. Desired data file path is not writeable. Unable to save data."
             )
         except:
-            print("Caught other error while collecting and saving NVD data. Exiting.")
+            print("Caught unknown error while collecting and saving NVD data. Exiting.")
             return None
 
-    # We need to load some source of data from NVD into the raw_cve_data object. If we just performed an update, then
-    # this object already exists, so only perform the following load if we haven't done the update.
+    # An update was not requested. Load previously saved NVD data into the calculator's raw_cve_data internal list.
+    # Note that if an update was just performed, then this list already exists. Only perform the following load if
+    # the update wasn't performed.
     else:
         ec3_calculator.load_data_file(args.data_file)
 
-    # Include normalized results if present.
+    # If normalization was requested, then we will attempt to find a replacement recommended CWE ID to use from this
+    # file. Normalization is attempting to use a CWE ID higher in the relationship tree that might be more commonly
+    # used during mapping. Note that not all CWE IDs have a recommended normalization ID to use as a replacement.
     if args.normalize_file:
         ec3_calculator.load_normalization_data(args.normalize_file)
 

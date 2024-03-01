@@ -9,8 +9,8 @@ Copyright (c) 2024 The MITRE Corporation. All rights reserved.
 """
 
 import argparse
-from datetime import datetime, timedelta
 import pathlib
+from datetime import datetime, timedelta
 
 from nvdlib import classes as nvd_classes  # type: ignore
 from requests.exceptions import SSLError

@@ -65,7 +65,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         help="CWE numerical identifier (e.g., 787 for CWE-787)",
         action="store",
         type=int,
-        required=True
+        required=True,
     )
     parser.add_argument(
         "--data_file",
@@ -129,21 +129,21 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         "-e",
         help="Temporal exploit code maturity (E) metric. (Expected values: X, H, F, P, U)",
         type=str,
-        choices=['X', 'H', 'F', 'P', 'U']
+        choices=["X", "H", "F", "P", "U"],
     )
     temporal_group.add_argument(
         "--remediation_level",
         "-rl",
         help="Temporal remediation level (RL) metric. (Expected values: X, U, W, T, O)",
         type=str,
-        choices=['X', 'U', 'W', 'T', 'O']
+        choices=["X", "U", "W", "T", "O"],
     )
     temporal_group.add_argument(
         "--report_confidence",
         "-rc",
         help="Temporal report confidence (RC) metric. (Expected values: X, C, R, U)",
         type=str,
-        choices=['X', 'C', 'R', 'U']
+        choices=["X", "C", "R", "U"],
     )
 
     # Allow for individual environmental modified impact CVSS metrics to be passed in.
@@ -153,77 +153,77 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         "-cr",
         help="Environmental confidentiality requirement (CR) metric. (Expected values:  X, H, M, L)",
         type=str,
-        choices=['X', 'H', 'M', 'L']
+        choices=["X", "H", "M", "L"],
     )
     environmental_group.add_argument(
         "--integrity_requirement",
         "-ir",
         help="Environmental integrity requirement (IR) metric. (Expected values:  X, H, M, L)",
         type=str,
-        choices=['X', 'H', 'M', 'L']
+        choices=["X", "H", "M", "L"],
     )
     environmental_group.add_argument(
         "--availability_requirement",
         "-ar",
         help="Environmental availability requirement (AR) metric. (Expected values:  X, H, M, L)",
         type=str,
-        choices=['X', 'H', 'M', 'L']
+        choices=["X", "H", "M", "L"],
     )
     environmental_group.add_argument(
         "--modified_attack_vector",
         "-mav",
         help="Environmental modified attack complexity (MAC) metric. (Expected values:  X, N, A, L, P)",
         type=str,
-        choices=['X', 'N', 'A', 'L', 'P']
+        choices=["X", "N", "A", "L", "P"],
     )
     environmental_group.add_argument(
         "--modified_attack_complexity",
         "-mac",
         help="Environmental modified attack complexity (MAC) metric. (Expected values:  X, L, H)",
         type=str,
-        choices=['X', 'L', 'H']
+        choices=["X", "L", "H"],
     )
     environmental_group.add_argument(
         "--modified_privileges_required",
         "-mpr",
         help="Environmental modified privileges required (MPR) metric. (Expected values:  X, N, L, H)",
         type=str,
-        choices=['X', 'N', 'L', 'H']
+        choices=["X", "N", "L", "H"],
     )
     environmental_group.add_argument(
         "--modified_user_interaction",
         "-mui",
         help="Environmental modified user interaction (MUI) metric. (Expected values:  X, N, R)",
         type=str,
-        choices=['X', 'N', 'R']
+        choices=["X", "N", "R"],
     )
     environmental_group.add_argument(
         "--modified_scope",
         "-ms",
         help="Environmental modified scope (MS) metric. (Expected values:  X, U, C)",
         type=str,
-        choices=['X', 'U', 'C']
+        choices=["X", "U", "C"],
     )
     environmental_group.add_argument(
         "--modified_confidentiality",
         "-mc",
         help="Environmental modified confidentiality (MC) metric. (Expected values:  X, N, L, H)",
         type=str,
-        choices=['X', 'N', 'L', 'H']
+        choices=["X", "N", "L", "H"],
     )
     environmental_group.add_argument(
         "--modified_integrity",
         "-mi",
         help="Environmental modified integrity (MI) metric. (Expected values: X, N, L, H)",
         type=str,
-        choices=['X', 'N', 'L', 'H']
+        choices=["X", "N", "L", "H"],
     )
     environmental_group.add_argument(
         "--modified_availability",
         "-ma",
         help="Environmental modified availability (MA) metric. (Expected values: X, N, L, H)",
         type=str,
-        choices=['X', 'N', 'L', 'H']
+        choices=["X", "N", "L", "H"],
     )
 
     # The argparse class' parse_args function will use interpret a list of strings as the provided parameters.

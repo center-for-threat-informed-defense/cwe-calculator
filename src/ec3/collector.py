@@ -15,7 +15,7 @@ from nvdlib import classes as nvd_classes  # type: ignore
 max_date_range: int = 120
 
 # Default integer value for how many prior days to acquire data. Maximum value allowed is [ec3.collector.max_date_range]
-date_difference_default: int = 1
+date_difference_default: int = 30
 
 
 class NvdCollector:
@@ -130,8 +130,9 @@ class NvdCollector:
             # this will need to be split across multiple API calls. We set a scrolling window and aggregate the data.
             if self.verbose:
                 print(
-                    f"Target range {self.target_range_start} through {self.target_range_end} is larger than {max_date_range} days. "
-                    f"Splitting into multiple calls for a scrolling {max_date_range} day time range."
+                    f"Target range {self.target_range_start} through {self.target_range_end} is larger than "
+                    f"{max_date_range} days. Splitting into multiple calls for a scrolling {max_date_range} "
+                    f"day time range."
                 )
                 print()  # print blank line
             temp_range_start: datetime = self.target_range_start

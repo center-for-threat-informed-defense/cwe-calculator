@@ -195,32 +195,32 @@ def test_cwe_id_valid_value_error(example_calculator):
         test_calculator = ec3.calculator.Cvss31Calculator("BAD")
 
 
-def test_get_cwes(example_calculator):
-    example_calculator.get_cwes()
+def test_build_cwe_table(example_calculator):
+    example_calculator.build_cwe_table()
     assert example_calculator.cwe_data[125]
 
 
-def test_get_cwes_rejected(example_calculator, example_cve_data_rejected):
+def test_build_cwe_table_rejected(example_calculator, example_cve_data_rejected):
     example_calculator.set_vulnerability_data([example_cve_data_rejected])
-    example_calculator.get_cwes()
+    example_calculator.build_cwe_table()
     assert not example_calculator.cwe_data
 
 
-def test_get_cwes_empty(example_calculator):
+def test_build_cwe_table_empty(example_calculator):
     assert not example_calculator.cwe_data[126]
 
 
-def test_get_results(example_calculator):
+def test_calculate_results(example_calculator):
 
     # Get default results dictionary.
-    assert example_calculator.get_results() == {"Projected CVSS": 7.5}
+    assert example_calculator.calculate_results(125) == {"Projected CVSS": 7.5}
 
 
-def test_get_results_verbose(example_calculator):
+def test_calculate_results_verbose(example_calculator):
 
     # Set calculator verbose mode to get wider results.
     example_calculator.verbose = True
-    assert example_calculator.get_results() == {
+    assert example_calculator.calculate_results(125) == {
         "Projected CVSS": 7.5,
         "CWE": 125,
         "Count": 1,
@@ -230,43 +230,43 @@ def test_get_results_verbose(example_calculator):
     }
 
 
-def test_get_results_empty_verbose(capsys, example_calculator):
+def test_calculate_results_empty_verbose(capsys, example_calculator):
 
     # Set calculator verbose mode to capture more edge case output.
     example_calculator.verbose = True
-    example_calculator.get_results(1000)
+    example_calculator.calculate_results(1000)
     captured = capsys.readouterr()
     assert str(captured.out).__contains__(
         "No vulnerability data found for CWE ID 1000."
     )
 
 
-def test_get_results_bad_id_verbose(capsys, example_calculator):
+def test_calculate_results_bad_id_verbose(capsys, example_calculator):
 
     # Set calculator verbose mode to capture more error output.
     example_calculator.verbose = True
-    example_calculator.get_results(-1)
+    example_calculator.calculate_results(-1)
     captured = capsys.readouterr()
     assert str(captured.out).__contains__("CWE ID provided was not a usable ID.")
 
 
-def test_set_score_modifiers(example_calculator):
+def test_set_cvss_modifiers(example_calculator):
 
     # Default vector for calculation: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N/
-    assert example_calculator.get_results() == {"Projected CVSS": 7.5}
-    example_calculator.set_score_modifiers(mav="P", cr="H")
+    assert example_calculator.calculate_results(125) == {"Projected CVSS": 7.5}
+    example_calculator.set_cvss_modifiers(mav="P", cr="H")
 
     # Modified vector for calculation: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N/CR:H/MAV:P
-    assert example_calculator.get_results() == {"Projected CVSS": 6.4}
+    assert example_calculator.calculate_results(125) == {"Projected CVSS": 6.4}
 
 
-def test_set_score_modifiers_all(example_calculator):
+def test_set_cvss_modifiers_all(example_calculator):
 
     # Override all metric values.
     # CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N/
     #   E:F/RL:U/RC:R/
     #   CR:H/IR:M/AR:M/MAV:P/MAC:L/MPR:L/MUI:R/MS:U/MC:L/MI:L/MA:L
-    example_calculator.set_score_modifiers(
+    example_calculator.set_cvss_modifiers(
         e="F",
         rl="U",
         rc="R",
@@ -282,15 +282,15 @@ def test_set_score_modifiers_all(example_calculator):
         mi="L",
         ma="L",
     )
-    assert example_calculator.get_results() == {"Projected CVSS": 4.1}
+    assert example_calculator.calculate_results(125) == {"Projected CVSS": 4.1}
 
 
-def test_get_cwes_value_error(example_calculator):
+def test_build_cwe_table_value_error(example_calculator):
 
     # Cause a ValueError exception
     with pytest.raises(ValueError):
-        example_calculator.set_score_modifiers(mav="?")
-        example_calculator.get_cwes()
+        example_calculator.set_cvss_modifiers(mav="?")
+        example_calculator.build_cwe_table()
 
 
 def test_set_vulnerability_data_type_error(example_calculator):

@@ -57,7 +57,7 @@ class Cvss31Calculator:
         self.raw_cve_data: list[nvd_classes.CVE] = []
 
         # Dictionary that will map CWE ID to list of CVSS vectors
-        self.cwe_data: dict[int, list[Cvss31]] = collections.defaultdict(list)
+        self.cwe_data: dict[int, list[list]] = collections.defaultdict(list)
 
         # Set optional temporal modifiers
         self.exploit_code_maturity: str = "X"
@@ -309,7 +309,7 @@ class Cvss31Calculator:
 
         return None
 
-    def set_score_modifiers(
+    def set_cvss_modifiers(
         self,
         e: str = "X",
         rl: str = "X",
@@ -365,11 +365,11 @@ class Cvss31Calculator:
 
         return None
 
-    def get_cwes(self) -> None:
+    def build_cwe_table(self) -> None:
         """
         Utility function to parse through the loaded vulnerability data, and create a lookup dict for each CWE
         identifier encountered. This data is stored within the class for later use during final calculations. Saves the
-        associated CVSS data (applying temporal/environmental modifications) within their respective CWE lookup bin.
+        associated CVE/CVSS data (applying temporal/environmental modifications) within their respective CWE lookup bin.
 
         :return: None
         """
@@ -418,7 +418,7 @@ class Cvss31Calculator:
 
                         cwes_for_cve = self.__get_cwe_from_cve(cve)
                         for cwe in cwes_for_cve:
-                            self.cwe_data[cwe].append(base_cvss)
+                            self.cwe_data[cwe].append([cve.id, base_cvss])
                 except ValueError:
                     print("Caught ValueError parsing CWE data from vulnerabilities.")
                     raise
@@ -430,59 +430,48 @@ class Cvss31Calculator:
 
         return None
 
-    def get_results(self, cwe_id: int = 0) -> dict:
+    def calculate_results(self, cwe_id: int = 0, normalize: bool = False) -> dict:
         """
         Utility function to conduct statistical analysis against source data. If verbose, include additional fields in
         the result dictionary. Can be called multiple times against different IDs and will use the same data until new
         data is loaded from file or NVD API.
 
-        :param cwe_id: An optional integer value for the CWE ID to collect data on.
-        :return The default results dict includes the projected CVSS score, accounting for temporal and environmental
-        modifications. Verbose output includes min/max/mean base score CVSS values, count (of vulnerabilities mapped to
-        the desired CWE ID), and the CWE ID used.
+        :param cwe_id: A required integer value for the CWE ID to collect data on.
+        :param normalize: A boolean value to determine whether a normalized CWE ID is used in lieu of the provided ID.
+        :return The results dict includes the projected CVSS score (accounting for temporal and environmental
+        modifications), the CWE ID used, min/max/mean base score CVSS values, count (of vulnerabilities mapped to the
+        desired CWE ID), and the list of related CVE records.
         """
-
-        # Update internal cwe data lookup dictionary from loaded vulnerability data.
-        self.get_cwes()
-
-        # If called without an ID, default to using a normalized ID (if present), otherwise the default CWE ID.
-        if cwe_id == 0:
-            cwe_id = self.normalized_id if self.has_normalized_id() else self.cwe_id
 
         if self.__cwe_id_valid(cwe_id):
             score_values: list[list[float]] = []
+            cve_ids: list[str] = []
             if self.cwe_data[cwe_id]:
 
-                for x in self.cwe_data[cwe_id]:
-                    scores = [x.get_base_score(), x.get_environmental_score()]
+                for [cve_id, cvss_data] in self.cwe_data[cwe_id]:
+                    scores = [
+                        cvss_data.get_base_score(),
+                        cvss_data.get_environmental_score(),
+                    ]
                     score_values.append(scores)
+                    cve_ids.append(cve_id)
 
                 # Create an output format with all required information
                 # score_values holds [base, environmental] calculated scores
-                # self.cwe_data is a dict that holds a list of Cvss31 objects indexed by the CWE ID
+                # self.cwe_data is a dict that holds a list of [cve_id, Cvss31] list entries indexed by the CWE ID
                 calculator_results: dict = {
                     "Projected CVSS": statistics.mean(
                         [item[1] for item in score_values]
-                    )
-                } | (
-                    {
-                        "CWE": cwe_id,
-                        "Count": len(self.cwe_data[cwe_id]),
-                        "Min CVSS Base Score": min([item[0] for item in score_values]),
-                        "Max CVSS Base Score": max([item[0] for item in score_values]),
-                        "Average CVSS Base Score": statistics.mean(
-                            [item[0] for item in score_values]
-                        ),
-                    }
-                    if self.verbose
-                    else {}
-                )
-
-                if self.verbose:
-                    print(
-                        f"Vulnerability data found for CWE ID {cwe_id}: {calculator_results}"
-                    )
-                    print()  # print blank line
+                    ),
+                    "CWE": cwe_id,
+                    "Count": len(self.cwe_data[cwe_id]),
+                    "Min CVSS Base Score": min([item[0] for item in score_values]),
+                    "Max CVSS Base Score": max([item[0] for item in score_values]),
+                    "Average CVSS Base Score": statistics.mean(
+                        [item[0] for item in score_values]
+                    ),
+                    "CVE Records": cve_ids,
+                }
 
                 return calculator_results
 
@@ -497,19 +486,119 @@ class Cvss31Calculator:
                 print()  # print blank line
 
         # Use the same output format but report no data found.
-        empty_results: dict = {"Projected CVSS": 0} | (
-            {
-                "CWE": cwe_id,
-                "Count": 0,
-                "Min CVSS Base Score": 0,
-                "Max CVSS Base Score": 0,
-                "Average CVSS Base Score": 0,
-            }
-            if self.verbose
-            else {}
-        )
+        empty_results: dict = {
+            "Projected CVSS": 0,
+            "CWE": cwe_id,
+            "Count": 0,
+            "Min CVSS Base Score": 0,
+            "Max CVSS Base Score": 0,
+            "Average CVSS Base Score": 0,
+            "CVE Records": [],
+        }
 
         return empty_results
+
+    def output_results(self, ec3_results: dict = {}) -> None:
+        """
+        Utility function to print a previously returned results dictionary. If verbose, include additional fields beyond
+        the "Projected CVSS". Validates the expected type for each field before rendering.
+
+        :param ec3_results: A required dictionary of values returned from Cvss31Calculator.calculate_results().
+        :return None
+        """
+
+        if self.__results_valid(ec3_results) and self.__cwe_id_valid(
+            ec3_results["CWE"]
+        ):
+            if self.verbose:
+                table_width: int = 40
+                table_title = "Base CVSS Scores"
+                print(f"Vulnerability data found for CWE ID {ec3_results['CWE']}: ")
+                # Print a centered table head for a table of width [table_width]. 16 is the length of the title.
+                print(
+                    f"{'-'*table_width}\n{' '*((table_width - len(table_title))//2)}{table_title}\n{'-'*table_width}"
+                )
+                print(f" Min: {ec3_results['Min CVSS Base Score']}")
+                print(f" Max: {ec3_results['Max CVSS Base Score']}")
+                print(f" Average: {ec3_results['Average CVSS Base Score']}")
+                print(f"{'-'*table_width}")
+                print()  # print blank line
+                print(
+                    f"Found {ec3_results['Count']} related CVE records: {ec3_results['CVE Records']}"
+                )
+                print()  # print blank line
+
+            else:
+                print(
+                    f"Vulnerability data found for CWE ID {ec3_results['CWE']}. Projected CVSS: {ec3_results['Projected CVSS']}"
+                )
+                print()  # print blank line
+
+        else:
+            if self.verbose:
+                print(f"No ec3 results dictionary provided.")
+                print()  # print blank line
+
+    @staticmethod
+    def __results_valid(ec3_results: dict | None) -> bool:
+        """
+        Utility function that confirms a results object passed in has all expected fields and conforms to the expected
+         data types.
+
+        :param ec3_results: Provided results dictionary to be evaluated for completeness and the correct structure
+        :return: True if ec3_results contains all fields in the expected data types, False otherwise.
+        """
+        results_invalid: bool = False
+        if ec3_results:
+            if "Projected CVSS" in ec3_results:
+                ec3_projected_cvss = ec3_results["Projected CVSS"]
+                if type(ec3_projected_cvss) != float:
+                    results_invalid = True
+            else:
+                results_invalid = True
+            if "CWE" in ec3_results:
+                ec3_cwe = ec3_results["CWE"]
+                if type(ec3_cwe) != int:
+                    results_invalid = True
+            else:
+                results_invalid = True
+            if "Count" in ec3_results:
+                ec3_count = ec3_results["Count"]
+                if type(ec3_count) != int:
+                    results_invalid = True
+            else:
+                results_invalid = True
+            if "Min CVSS Base Score" in ec3_results:
+                ec3_min_cvss = ec3_results["Min CVSS Base Score"]
+                if type(ec3_min_cvss) != float:
+                    results_invalid = True
+            else:
+                results_invalid = True
+            if "Max CVSS Base Score" in ec3_results:
+                ec3_max_cvss = ec3_results["Max CVSS Base Score"]
+                if type(ec3_max_cvss) != float:
+                    results_invalid = True
+            else:
+                results_invalid = True
+            if "Average CVSS Base Score" in ec3_results:
+                ec3_avg_cvss = ec3_results["Average CVSS Base Score"]
+                if type(ec3_avg_cvss) != float:
+                    results_invalid = True
+            else:
+                results_invalid = True
+            if "CVE Records" in ec3_results:
+                ec3_cves = ec3_results["CVE Records"]
+                if type(ec3_cves) == list:
+                    for cve in ec3_cves:
+                        if type(cve) != str:
+                            results_invalid = True
+            else:
+                results_invalid = True
+
+            # Any missing field or type mismatch would invalidate the result dictionary.
+            return not results_invalid
+        else:
+            return False
 
 
 class RestrictedUnpickler(pickle.Unpickler):

@@ -65,7 +65,6 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         help="CWE numerical identifier (e.g., 787 for CWE-787)",
         action="store",
         type=int,
-        required=True,
     )
     parser.add_argument(
         "--data_file",
@@ -284,7 +283,7 @@ def main(arg_list: list[str] | None = None) -> None:
 
     # If a temporal or environmental metric flag was not passed in through the CLI args, it would default to None.
     # For each metric modifier: either use the passed in value, or "X" if not set.
-    ec3_calculator.set_score_modifiers(
+    ec3_calculator.set_cvss_modifiers(
         e=args.exploit_code_maturity if args.exploit_code_maturity else "X",
         rl=args.remediation_level if args.remediation_level else "X",
         rc=args.report_confidence if args.report_confidence else "X",
@@ -318,6 +317,7 @@ def main(arg_list: list[str] | None = None) -> None:
         )
         try:
             ec3_calculator.set_vulnerability_data(source_collector.pull_target_data())
+            ec3_calculator.build_cwe_table()
             if args.verbose:
                 print("Saving data from API call to data file...")
             ec3_calculator.save_data_file(data_file_str=args.data_file)
@@ -342,6 +342,7 @@ def main(arg_list: list[str] | None = None) -> None:
     # the update wasn't performed.
     else:
         ec3_calculator.load_data_file(args.data_file)
+        ec3_calculator.build_cwe_table()
 
     # If normalization was requested, then we will attempt to find a replacement recommended CWE ID to use from this
     # file. Normalization is attempting to use a CWE ID higher in the relationship tree that might be more commonly
@@ -350,10 +351,12 @@ def main(arg_list: list[str] | None = None) -> None:
         ec3_calculator.load_normalization_data(args.normalize_file)
 
     # Results will be calculated for a normalized CWE ID if present. Otherwise, the default initialized CWE ID.
-    # Non-normalized results can be obtained by calling ec3_calculator.get_results(args.cwe)
-    ec3_results: dict = ec3_calculator.get_results()
-
-    print(f"Projected CVSS = {ec3_results['Projected CVSS']}")
+    # Non-normalized results can be obtained by calling ec3_calculator.calculate_results(args.cwe)
+    # or ec3_calculator.calculate_results(args.cwe, False)
+    ec3_results: dict = ec3_calculator.calculate_results(
+        cwe_id=args.cwe, normalize=True
+    )
+    ec3_calculator.output_results(ec3_results)
 
     return None
 

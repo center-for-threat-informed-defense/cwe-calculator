@@ -356,7 +356,7 @@ def main(arg_list: list[str] | None = None) -> None:
     ec3_results: dict = ec3_calculator.calculate_results(
         cwe_id=args.cwe, normalize=True
     )
-    ec3_calculator.output_results(ec3_results)
+    ec3_calculator.output_results(ec3_results, 4)
 
     return None
 

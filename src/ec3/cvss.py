@@ -275,15 +275,16 @@ class Cvss31:
         :return: None.
         """
 
+        if av is None:
+            raise ValueError(
+                "Attack vector (AV) exploitability metric is not provided."
+            )
+
         match av.upper():
             case "N" | "A" | "L" | "P":
                 self.av = av
             case "NETWORK" | "ADJACENT" | "ADJACENT_NETWORK" | "LOCAL" | "PHYSICAL":
                 self.av = av[0]
-            case None:
-                raise ValueError(
-                    "Attack vector (AV) exploitability metric is not provided."
-                )
             case _:
                 raise ValueError(
                     "Bad value provided for Attack vector (AV) exploitability metric."
@@ -300,15 +301,16 @@ class Cvss31:
         :return: None.
         """
 
+        if ac is None:
+            raise ValueError(
+                "Attack Complexity (AC) exploitability metric is not provided."
+            )
+
         match ac.upper():
             case "L" | "H":
                 self.ac = ac
             case "LOW" | "HIGH":
                 self.ac = ac[0]
-            case None:
-                raise ValueError(
-                    "Attack Complexity (AC) exploitability metric is not provided."
-                )
             case _:
                 raise ValueError(
                     "Bad value provided for Attack Complexity (AC) exploitability metric."
@@ -325,15 +327,16 @@ class Cvss31:
         :return: None.
         """
 
+        if pr is None:
+            raise ValueError(
+                "Privileges Required (PR) exploitability metric is not provided."
+            )
+
         match pr.upper():
             case "N" | "L" | "H":
                 self.pr = pr
             case "NONE" | "LOW" | "HIGH":
                 self.pr = pr[0]
-            case None:
-                raise ValueError(
-                    "Privileges Required (PR) exploitability metric is not provided."
-                )
             case _:
                 raise ValueError(
                     "Bad value provided for Privileges Required (PR) exploitability metric."
@@ -350,15 +353,16 @@ class Cvss31:
         :return: None.
         """
 
+        if ui is None:
+            raise ValueError(
+                "User Interaction (UI) exploitability metric is not provided."
+            )
+
         match ui.upper():
             case "N" | "R":
                 self.ui = ui
             case "NONE" | "REQUIRED":
                 self.ui = ui[0]
-            case None:
-                raise ValueError(
-                    "User Interaction (UI) exploitability metric is not provided."
-                )
             case _:
                 raise ValueError(
                     "Bad value provided for User Interaction (UI) exploitability metric."
@@ -375,13 +379,14 @@ class Cvss31:
         :return: None.
         """
 
+        if s is None:
+            raise ValueError("Scope (S) exploitability metric is not provided.")
+
         match s.upper():
             case "U" | "C":
                 self.s = s
             case "UNCHANGED" | "CHANGED":
                 self.s = s[0]
-            case None:
-                raise ValueError("Scope (S) exploitability metric is not provided.")
             case _:
                 raise ValueError(
                     "Bad value provided for Scope (S) exploitability metric."
@@ -398,13 +403,14 @@ class Cvss31:
         :return: None.
         """
 
+        if c is None:
+            raise ValueError("Confidentiality (C) impact metric is not provided.")
+
         match c.upper():
             case "H" | "L" | "N":
                 self.c = c
             case "HIGH" | "LOW" | "NONE":
                 self.c = c[0]
-            case None:
-                raise ValueError("Confidentiality (C) impact metric is not provided.")
             case _:
                 raise ValueError(
                     "Bad value provided for Confidentiality (C) impact metric."
@@ -421,13 +427,14 @@ class Cvss31:
         :return: None.
         """
 
+        if i is None:
+            raise ValueError("Integrity (I) impact metric is not provided.")
+
         match i.upper():
             case "H" | "L" | "N":
                 self.i = i
             case "HIGH" | "LOW" | "NONE":
                 self.i = i[0]
-            case None:
-                raise ValueError("Integrity (I) impact metric is not provided.")
             case _:
                 raise ValueError("Bad value provided for Integrity (I) impact metric.")
 
@@ -442,13 +449,14 @@ class Cvss31:
         :return: None.
         """
 
+        if a is None:
+            raise ValueError("Availability (A) impact metric is not provided.")
+
         match a.upper():
             case "H" | "L" | "N":
                 self.a = a
             case "HIGH" | "LOW" | "NONE":
                 self.a = a[0]
-            case None:
-                raise ValueError("Availability (A) impact metric is not provided.")
             case _:
                 raise ValueError(
                     "Bad value provided for Availability (A) impact metric."
@@ -464,6 +472,9 @@ class Cvss31:
         :param e: String representing the desired value for the Exploit Code Maturity temporal metric
         :return: None.
         """
+
+        if e is None:
+            e = "X"
 
         match e.upper():
             case "X" | "H" | "F" | "P" | "U":
@@ -488,6 +499,9 @@ class Cvss31:
         :return: None.
         """
 
+        if rl is None:
+            rl = "X"
+
         match rl.upper():
             case "X" | "U" | "W" | "T" | "O":
                 self.rl = rl
@@ -510,6 +524,9 @@ class Cvss31:
         :param rc: String representing the desired value for the Report Confidence temporal metric
         :return: None.
         """
+
+        if rc is None:
+            rc = "X"
 
         match rc.upper():
             case "X" | "C" | "R" | "U":
@@ -534,6 +551,9 @@ class Cvss31:
         :return: None.
         """
 
+        if cr is None:
+            cr = "X"
+
         match cr.upper():
             case "X" | "H" | "M" | "L":
                 self.cr = cr
@@ -556,6 +576,9 @@ class Cvss31:
         :param ir: String representing the desired value for the Integrity Requirement environmental metric
         :return: None.
         """
+
+        if ir is None:
+            ir = "X"
 
         match ir.upper():
             case "X" | "H" | "M" | "L":
@@ -580,6 +603,9 @@ class Cvss31:
         :return: None.
         """
 
+        if ar is None:
+            ar = "X"
+
         match ar.upper():
             case "X" | "H" | "M" | "L":
                 self.ar = ar
@@ -602,6 +628,9 @@ class Cvss31:
         :param mav: String representing the desired value for the Modified Attack Vector exploitability metric
         :return: None.
         """
+
+        if mav is None:
+            mav = "X"
 
         match mav.upper():
             case "X" | "N" | "A" | "L" | "P":
@@ -626,6 +655,9 @@ class Cvss31:
         :return: None.
         """
 
+        if mac is None:
+            mac = "X"
+
         match mac.upper():
             case "X" | "L" | "H":
                 self.mac = mac
@@ -648,6 +680,9 @@ class Cvss31:
         :param mpr: String representing the desired value for the Modified Privileges Required environmental metric
         :return: None.
         """
+
+        if mpr is None:
+            mpr = "X"
 
         match mpr.upper():
             case "X" | "N" | "L" | "H":
@@ -672,6 +707,9 @@ class Cvss31:
         :return: None.
         """
 
+        if mui is None:
+            mui = "X"
+
         match mui.upper():
             case "X" | "N" | "R":
                 self.mui = mui
@@ -694,6 +732,9 @@ class Cvss31:
         :param ms: String representing the desired value for the Modified Scope environmental metric
         :return: None.
         """
+
+        if ms is None:
+            ms = "X"
 
         match ms.upper():
             case "X" | "U" | "C":
@@ -718,6 +759,9 @@ class Cvss31:
         :return: None.
         """
 
+        if mc is None:
+            mc = "X"
+
         match mc.upper():
             case "X" | "H" | "L" | "N":
                 self.mc = mc
@@ -740,6 +784,9 @@ class Cvss31:
         :param mi: String representing the desired value for the Modified Integrity environmental metric
         :return: None.
         """
+
+        if mi is None:
+            mi = "X"
 
         match mi.upper():
             case "X" | "H" | "L" | "N":
@@ -764,6 +811,9 @@ class Cvss31:
         :return: None.
         """
 
+        if ma is None:
+            ma = "X"
+
         match ma.upper():
             case "X" | "H" | "L" | "N":
                 self.ma = ma
@@ -779,24 +829,26 @@ class Cvss31:
         return None
 
     def base_valid(self) -> bool:
-        """Returns True if the mandatory values for this CVSS are all present.
+        """Returns True if the mandatory values for this CVSS are all present and have valid values.
         https://www.first.org/cvss/v3.1/specification-document Table 15 denotes the following as mandatory:
 
         Attack Vector (AV), Attack Complexity (AC), Privileges Required (PR), User Interaction (UI), Scope (S),
         Confidentiality (C), Integrity (I), Availability (A)
         """
-        if (
-            self.av
-            and self.ac
-            and self.pr
-            and self.ui
-            and self.s
-            and self.c
-            and self.i
-            and self.a
-        ):
+
+        # Use the validation within the set_* functions to determine whether each value is allowed.
+        try:
+            self.set_av(self.av)
+            self.set_ac(self.ac)
+            self.set_pr(self.pr)
+            self.set_ui(self.ui)
+            self.set_s(self.s)
+            self.set_c(self.c)
+            self.set_i(self.i)
+            self.set_a(self.a)
             return True
-        return False
+        except ValueError:
+            return False
 
     def get_base_score(self) -> float:
         """

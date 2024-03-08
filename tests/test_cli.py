@@ -186,7 +186,7 @@ def test_main_collector(
     assert str(captured.out).__contains__(
         "Initialized NvdCollector to search CVEs from 2024-01-01 00:00:00 until 2024-02-01 00:00:00."
     )
-    assert str(captured.out).__contains__("Projected CVSS = 7.5")
+    assert str(captured.out).__contains__("Projected CVSS: 7.5")
 
 
 @patch.object(ec3.collector.NvdCollector, "pull_target_data")
@@ -196,4 +196,4 @@ def test_main_simple_collector(
     mock_pulled_data.return_value = [example_cve_data]
     ec3.cli.main(example_simple_collector_args)
     captured = capsys.readouterr()
-    assert str(captured.out).__contains__("Projected CVSS = 7.5")
+    assert str(captured.out).__contains__("Projected CVSS: 7.5")

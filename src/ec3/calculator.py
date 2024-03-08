@@ -363,6 +363,9 @@ class Cvss31Calculator:
         self.modified_integrity = mi
         self.modified_availability = ma
 
+        # Update internal cwe table using new modifiers
+        self.build_cwe_table()
+
         return None
 
     def build_cwe_table(self) -> None:
@@ -498,12 +501,13 @@ class Cvss31Calculator:
 
         return empty_results
 
-    def output_results(self, ec3_results: dict = {}) -> None:
+    def output_results(self, ec3_results: dict = {}, cve_cols: int = 4) -> None:
         """
         Utility function to print a previously returned results dictionary. If verbose, include additional fields beyond
         the "Projected CVSS". Validates the expected type for each field before rendering.
 
         :param ec3_results: A required dictionary of values returned from Cvss31Calculator.calculate_results().
+        :param cve_cols: An optional integer to set how many CVE records appear per line during output.
         :return None
         """
 
@@ -511,9 +515,16 @@ class Cvss31Calculator:
             ec3_results["CWE"]
         ):
             if self.verbose:
+
+                # If negative or bad value provided, set back to default of 4 columns per line.
+                if not isinstance(cve_cols, int) or cve_cols < 1:
+                    cve_cols = 4
+
                 table_width: int = 40
                 table_title = "Base CVSS Scores"
-                print(f"Vulnerability data found for CWE ID {ec3_results['CWE']}: ")
+                print(f"Vulnerability data found for CWE ID {ec3_results['CWE']}:")
+                print(f"Projected CVSS: {ec3_results['Projected CVSS']}")
+                print()  # print blank line
                 # Print a centered table head for a table of width [table_width]. 16 is the length of the title.
                 print(
                     f"{'-'*table_width}\n{' '*((table_width - len(table_title))//2)}{table_title}\n{'-'*table_width}"
@@ -524,13 +535,16 @@ class Cvss31Calculator:
                 print(f"{'-'*table_width}")
                 print()  # print blank line
                 print(
-                    f"Found {ec3_results['Count']} related CVE records: {ec3_results['CVE Records']}"
+                    f"Found {ec3_results['Count']} related CVE record{'s' if ec3_results['Count'] > 1 else ''}:"
                 )
+                for i in range(0, len(ec3_results["CVE Records"]), cve_cols):
+                    print("\t".join(ec3_results["CVE Records"][i : i + cve_cols]))
                 print()  # print blank line
 
             else:
                 print(
-                    f"Vulnerability data found for CWE ID {ec3_results['CWE']}. Projected CVSS: {ec3_results['Projected CVSS']}"
+                    f"Vulnerability data found for CWE ID {ec3_results['CWE']}. Projected CVSS: "
+                    f"{ec3_results['Projected CVSS']}"
                 )
                 print()  # print blank line
 
@@ -552,46 +566,48 @@ class Cvss31Calculator:
         if ec3_results:
             if "Projected CVSS" in ec3_results:
                 ec3_projected_cvss = ec3_results["Projected CVSS"]
-                if type(ec3_projected_cvss) != float:
+                if not isinstance(ec3_projected_cvss, float):
                     results_invalid = True
             else:
                 results_invalid = True
             if "CWE" in ec3_results:
                 ec3_cwe = ec3_results["CWE"]
-                if type(ec3_cwe) != int:
+                if not isinstance(ec3_cwe, int):
                     results_invalid = True
             else:
                 results_invalid = True
             if "Count" in ec3_results:
                 ec3_count = ec3_results["Count"]
-                if type(ec3_count) != int:
+                if not isinstance(ec3_count, int):
                     results_invalid = True
             else:
                 results_invalid = True
             if "Min CVSS Base Score" in ec3_results:
                 ec3_min_cvss = ec3_results["Min CVSS Base Score"]
-                if type(ec3_min_cvss) != float:
+                if not isinstance(ec3_min_cvss, float):
                     results_invalid = True
             else:
                 results_invalid = True
             if "Max CVSS Base Score" in ec3_results:
                 ec3_max_cvss = ec3_results["Max CVSS Base Score"]
-                if type(ec3_max_cvss) != float:
+                if not isinstance(ec3_max_cvss, float):
                     results_invalid = True
             else:
                 results_invalid = True
             if "Average CVSS Base Score" in ec3_results:
                 ec3_avg_cvss = ec3_results["Average CVSS Base Score"]
-                if type(ec3_avg_cvss) != float:
+                if not isinstance(ec3_avg_cvss, float):
                     results_invalid = True
             else:
                 results_invalid = True
             if "CVE Records" in ec3_results:
                 ec3_cves = ec3_results["CVE Records"]
-                if type(ec3_cves) == list:
+                if isinstance(ec3_cves, list):
                     for cve in ec3_cves:
-                        if type(cve) != str:
+                        if not isinstance(cve, str):
                             results_invalid = True
+                else:
+                    results_invalid = True
             else:
                 results_invalid = True
 

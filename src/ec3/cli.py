@@ -225,7 +225,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         choices=["X", "N", "L", "H"],
     )
 
-    # The argparse class' parse_args function will use interpret a list of strings as the provided parameters.
+    # The argparse class' parse_args function will interpret a list of strings as the provided parameters.
     # If this list of inputs is not explicitly provided, then the default behavior is to use sys.argv (the list
     # of arguments passed to the called python script) as this list of string inputs.
     return parser.parse_args(arg_list)
@@ -333,7 +333,7 @@ def main(arg_list: list[str] | None = None) -> None:
             print(
                 "Caught FileNotFoundError. Desired data file path is not writeable. Unable to save data."
             )
-        except:
+        except Exception:
             print("Caught unknown error while collecting and saving NVD data. Exiting.")
             return None
 

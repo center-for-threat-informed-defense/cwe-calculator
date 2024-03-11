@@ -205,7 +205,7 @@ class Cvss31Calculator:
         except FileNotFoundError:
             print("Caught FileNotFoundError. Input file not found.")
         except PermissionError:
-            print("Caught FileNotFoundError. Unable to read data file.")
+            print("Caught PermissionError. Unable to read data file.")
         except pickle.UnpicklingError:
             print("Caught UnpicklingError. Input file not in correct pickle format.")
 
@@ -237,7 +237,7 @@ class Cvss31Calculator:
 
     def load_normalization_data(self, normalization_file_str: str) -> None:
         """
-        Load the normalization data CSV file and finds the first valid corresponding normalization CWE identifier.
+        Loads the normalization data CSV file and finds the first valid corresponding normalization CWE identifier.
         Store this value within the class for later use during the final calculations.
 
         The normalization file should only have one suggestion per CWE ID in the left column.
@@ -435,9 +435,8 @@ class Cvss31Calculator:
 
     def calculate_results(self, cwe_id: int = 0, normalize: bool = False) -> dict:
         """
-        Utility function to conduct statistical analysis against source data. If verbose, include additional fields in
-        the result dictionary. Can be called multiple times against different IDs and will use the same data until new
-        data is loaded from file or NVD API.
+        Utility function to conduct statistical analysis against source data. Can be called multiple times against
+        different IDs and will use the same data until new data is loaded from a file or the ec3.collector.
 
         :param cwe_id: A required integer value for the CWE ID to collect data on.
         :param normalize: A boolean value to determine whether a normalized CWE ID is used in lieu of the provided ID.
@@ -485,7 +484,7 @@ class Cvss31Calculator:
 
         else:
             if self.verbose:
-                print(f"CWE ID provided was not a usable ID.")
+                print("CWE ID provided was not a usable ID.")
                 print()  # print blank line
 
         # Use the same output format but report no data found.
@@ -550,8 +549,34 @@ class Cvss31Calculator:
 
         else:
             if self.verbose:
-                print(f"No ec3 results dictionary provided.")
-                print()  # print blank line
+                if not self.__results_valid(ec3_results):
+                    print("No ec3 results dictionary provided.")
+                    print()  # print blank line
+                else:
+                    print("Provided ec3 results dictionary contains an invalid CWE ID.")
+                    print()  # print blank line
+
+    @staticmethod
+    def __dict_key_matches_type(
+        test_dict: dict | None, test_key: str, test_type: type
+    ) -> bool:
+        """
+        Utility function that confirms a dictionary passed in has the specified key present, and that key is of the
+        expected Type.
+
+        :param test_dict: Provided dictionary to be queried
+        :param test_key: The string key to look up within test_dict.
+        :param test_type: The expected type of test_dict[test_key].
+        :return: True if test_dict[test_key] is an instance of test_type, False otherwise
+        """
+
+        # Ensure test_dict is not None/empty and contains the test_key
+        if not test_dict:
+            return False
+        if test_key not in test_dict:
+            return False
+
+        return isinstance(test_dict[test_key], test_type)
 
     @staticmethod
     def __results_valid(ec3_results: dict | None) -> bool:
@@ -564,52 +589,36 @@ class Cvss31Calculator:
         """
         results_invalid: bool = False
         if ec3_results:
-            if "Projected CVSS" in ec3_results:
-                ec3_projected_cvss = ec3_results["Projected CVSS"]
-                if not isinstance(ec3_projected_cvss, float):
-                    results_invalid = True
-            else:
+            #
+            if not Cvss31Calculator.__dict_key_matches_type(
+                ec3_results, "Projected CVSS", float
+            ):
                 results_invalid = True
-            if "CWE" in ec3_results:
-                ec3_cwe = ec3_results["CWE"]
-                if not isinstance(ec3_cwe, int):
-                    results_invalid = True
-            else:
+            if not Cvss31Calculator.__dict_key_matches_type(ec3_results, "CWE", int):
                 results_invalid = True
-            if "Count" in ec3_results:
-                ec3_count = ec3_results["Count"]
-                if not isinstance(ec3_count, int):
-                    results_invalid = True
-            else:
+            if not Cvss31Calculator.__dict_key_matches_type(ec3_results, "Count", int):
                 results_invalid = True
-            if "Min CVSS Base Score" in ec3_results:
-                ec3_min_cvss = ec3_results["Min CVSS Base Score"]
-                if not isinstance(ec3_min_cvss, float):
-                    results_invalid = True
-            else:
+            if not Cvss31Calculator.__dict_key_matches_type(
+                ec3_results, "Min CVSS Base Score", float
+            ):
                 results_invalid = True
-            if "Max CVSS Base Score" in ec3_results:
-                ec3_max_cvss = ec3_results["Max CVSS Base Score"]
-                if not isinstance(ec3_max_cvss, float):
-                    results_invalid = True
-            else:
+            if not Cvss31Calculator.__dict_key_matches_type(
+                ec3_results, "Max CVSS Base Score", float
+            ):
                 results_invalid = True
-            if "Average CVSS Base Score" in ec3_results:
-                ec3_avg_cvss = ec3_results["Average CVSS Base Score"]
-                if not isinstance(ec3_avg_cvss, float):
-                    results_invalid = True
-            else:
+            if not Cvss31Calculator.__dict_key_matches_type(
+                ec3_results, "Average CVSS Base Score", float
+            ):
                 results_invalid = True
-            if "CVE Records" in ec3_results:
-                ec3_cves = ec3_results["CVE Records"]
-                if isinstance(ec3_cves, list):
-                    for cve in ec3_cves:
-                        if not isinstance(cve, str):
-                            results_invalid = True
-                else:
-                    results_invalid = True
-            else:
+            if not Cvss31Calculator.__dict_key_matches_type(
+                ec3_results, "CVE Records", list
+            ):
                 results_invalid = True
+            else:
+                # "CVE Records" was a valid key of type list within ec3_results
+                for cve in ec3_results["CVE Records"]:
+                    if not isinstance(cve, str):
+                        results_invalid = True
 
             # Any missing field or type mismatch would invalidate the result dictionary.
             return not results_invalid

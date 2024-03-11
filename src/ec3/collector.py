@@ -33,7 +33,8 @@ class NvdCollector:
     def __init__(
         self,
         api_key: str | None = None,
-        target_range_start: datetime = datetime.now() - timedelta(days=1),
+        target_range_start: datetime = datetime.now()
+        - timedelta(days=date_difference_default),
         target_range_end: datetime = datetime.now(),
         verbose: bool = False,
     ) -> None:
@@ -41,11 +42,10 @@ class NvdCollector:
         Initialize a NvdCollector class instance using the provided parameters.
 
         :param api_key: Defaults to None. If provided, this is used to improve the API rate limits.
-        :param target_range_start: Defaults to one day ago from the current date and time. Represents the
-        earliest date boundary to obtain data. This class will restrict this value to be 1/1/2020 at the earliest.
+        :param target_range_start: Defaults to [date_difference_default] day(s) ago from the current date and time.
+        Represents the earliest date boundary to obtain data. This value will be restricted to 1/1/2020 or later.
         :param target_range_end: Defaults to the current date and time. Represents the most current date boundary
-        to obtain data. This class will restrict this value to be equal to the current date and time if provided
-        a future date and time.
+        to obtain data. This value will be restricted to be equal to the current date and time or earlier.
         :param verbose: Defaults to False. A boolean flag to signal whether additional statements should be displayed.
         :return None
         """
@@ -82,7 +82,7 @@ class NvdCollector:
         # Conduct date range validations: 1/1/2020 <= target_range_start <= target_range_end <= cur_date
         cur_date = datetime.now()
 
-        if target_range_start <= datetime(2020, 1, 1, 0, 0, 0):
+        if target_range_start < datetime(2020, 1, 1, 0, 0, 0):
             if self.verbose:
                 print("target_range_start is prior to 1/1/2020. Adjusting to 1/1/2020.")
             target_range_start = datetime(2020, 1, 1, 0, 0, 0)
@@ -94,7 +94,7 @@ class NvdCollector:
                 )
             target_range_start = cur_date
 
-        if target_range_end <= target_range_start:
+        if target_range_end < target_range_start:
             if self.verbose:
                 print(
                     f"target_range_end is earlier than target_range_start. Adjusting to {target_range_start}."

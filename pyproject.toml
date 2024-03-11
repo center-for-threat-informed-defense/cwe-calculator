@@ -27,6 +27,9 @@ types-requests = "^2.31.0.20240125"
 types-mock = "^5.1.0.20240106"
 mock = "^5.1.0"
 
+[tool.poetry.scripts]
+ec3-cli = "ec3.cli:main"
+
 [tool.black]
 line-length = 88
 target-version = ['py310']

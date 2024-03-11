@@ -15,10 +15,8 @@ import statistics
 
 from nvdlib import classes as nvd_classes  # type: ignore
 
+from ec3 import data_default_file
 from ec3.cvss import Cvss31
-
-# Default path for storing returned API data.
-data_default_file: str = "./data/nvd_loaded.pickle"
 
 
 class Cvss31Calculator:
@@ -28,33 +26,32 @@ class Cvss31Calculator:
 
     def __init__(
         self,
-        cwe_id: int = 0,
+        data_file_str: str = data_default_file,
+        normalization_file_str: str = "",
         verbose: bool = False,
     ) -> None:
         """
         Initialize a Cvss31Calculator class instance using the provided parameters.
 
-        :param cwe_id: an integer representing the CWE ID to query the NVD data against. Also used as the lookup value
-        when normalizing using a remapping CSV file.
-        :param verbose: Defaults to False. A boolean flag to signal whether additional statements should be displayed.
+        :param data_file_str: A string representing the default location to load vulnerability data from.
+        :param normalization_file_str: A string representing the normalization CSV file location to use when
+        calculating normalized results.
+        :param verbose: A boolean flag to signal whether additional statements should be displayed.
         """
 
         self.verbose: bool = verbose
-        self.cwe_id: int = 0
-
-        # Get the input CWE. Make sure the ID is greater than 0. Otherwise, warn the user of a bad cwe_id parameter.
-        if self.__cwe_id_valid(cwe_id):
-            self.cwe_id = cwe_id
-        else:
-            raise ValueError(
-                "Can not initialize Cvss31Calculator with the provided CWE identifier."
-            )
-
-        # This value gets set if a normalization CSV file is loaded.
-        self.normalized_id: int = 0
 
         # This will hold a list of nvdlib.classes.CVE objects loaded from a collector or file.
         self.raw_cve_data: list[nvd_classes.CVE] = []
+
+        # Set self.raw_cve_data to default data file contents.
+        if data_file_str:
+            self.load_data_file(data_file_str)
+        else:
+            self.load_data_file(data_default_file)
+
+        # Save the path to the normalization file to use when calculate_results is called with the normalize flag.
+        self.normalization_file_str = normalization_file_str
 
         # Dictionary that will map CWE ID to list of CVSS vectors
         self.cwe_data: dict[int, list[list]] = collections.defaultdict(list)
@@ -78,9 +75,7 @@ class Cvss31Calculator:
         self.modified_availability: str = "X"
 
         if self.verbose:
-            print(
-                f"Initialized Cvss31Calculator to search vulnerability data for CWE ID {self.cwe_id}."
-            )
+            print(f"Initialized Cvss31Calculator.")
             print()  # print blank line
 
     @staticmethod
@@ -168,16 +163,6 @@ class Cvss31Calculator:
             else []
         )
 
-    def has_normalized_id(self) -> bool:
-        """
-        Utility function to quickly determine if this calculator instance has a valid loaded normalized CWE ID.
-        Useful in determining what default results to return.
-
-        :return: True if normalized_id was initialized to a valid value, otherwise False
-        """
-
-        return self.__cwe_id_valid(self.normalized_id)
-
     def load_data_file(self, data_file_str: str | None = None) -> None:
         """
         Loads a previously saved pickle file containing NVD vulnerability data into a nvdlib.classes.CVE list that the
@@ -211,65 +196,38 @@ class Cvss31Calculator:
 
         return None
 
-    def save_data_file(self, data_file_str: str | None = None) -> None:
+    def normalize_cwe(self, cwe_id: int = 0) -> int | None:
         """
-        Save JSON data returned from the NVD API into a pickle file that we can re-load without calling the API again.
-
-        :param data_file_str: A filename to write the saved NVD JSON data in pickle format, preserving the NVD object.
-        :return None
-        """
-
-        if data_file_str is None:
-            if self.verbose:
-                print(
-                    f"No data_file provided, setting to default file: {data_default_file}"
-                )
-                print()  # print blank line
-            data_file_str = data_default_file
-
-        try:
-            with open(data_file_str, "wb") as pickle_fh:
-                pickle.dump(self.raw_cve_data, pickle_fh, pickle.HIGHEST_PROTOCOL)
-        except FileNotFoundError:
-            raise
-
-        return None
-
-    def load_normalization_data(self, normalization_file_str: str) -> None:
-        """
-        Loads the normalization data CSV file and finds the first valid corresponding normalization CWE identifier.
-        Store this value within the class for later use during the final calculations.
+        Loads the normalization data CSV file and returns the first valid corresponding normalization CWE identifier.
 
         The normalization file should only have one suggestion per CWE ID in the left column.
         The file may map an identifier to itself or "Other". Both of these cases are expected to set the normalization
         CWE ID to None. If unable to load data from a file, file permissions are encountered, or no lookup value is
         found, set the normalization CWE ID to None.
 
-        :param normalization_file_str: A path to the CSV file containing the normalization data to load
-        :return None
+        :param cwe_id: A CWE identifier used for the lookup in the left column of the normalization CSV file.
+        :return A CWE identifier of the normalized value to use in place of the original cwe_id, or None if no new ID
+        was found.
         """
 
         try:
-            with open(normalization_file_str, mode="r") as normalization_fh:
+            with open(self.normalization_file_str, mode="r") as normalization_fh:
                 normalization_file = csv.reader(normalization_fh)
 
                 # Check each line, return on the first valid match. Otherwise, return None.
                 for lines in normalization_file:
-                    if lines[0] == self.cwe_id.__str__():
+                    if lines[0] == cwe_id.__str__():
 
                         # Try to cast the normalized value column as an integer and return
                         try:
-                            if (
-                                lines[1] != "Other"
-                                and lines[1] != self.cwe_id.__str__()
-                            ):
-                                self.normalized_id = int(lines[1])
+                            if lines[1] != "Other" and lines[1] != cwe_id.__str__():
+                                normalized_id = int(lines[1])
                                 if self.verbose:
                                     print(
-                                        f"CWE ID {self.cwe_id} matched normalization ID {self.normalized_id}."
+                                        f"CWE ID {cwe_id} matched normalization ID {normalized_id}."
                                     )
                                     print()  # print blank line
-                                return None
+                                return normalized_id
                         except ValueError:
                             print(
                                 "Caught ValueError. CWE ID found, but normalized value is not a usable ID."
@@ -277,7 +235,7 @@ class Cvss31Calculator:
 
                 # The whole file was searched without error. Notify the user that no match was found.
                 if self.verbose:
-                    print(f"CWE ID {self.cwe_id} does not normalize to a new ID.")
+                    print(f"CWE ID {cwe_id} does not normalize to a new ID.")
                     print()  # print blank line
 
         except FileNotFoundError:
@@ -285,8 +243,7 @@ class Cvss31Calculator:
         except PermissionError:
             print("Caught PermissionError. Unable to open normalization file.")
 
-        # If still here, then no value was found or an error was encountered. Leave normalized CWE ID as previously
-        # initialized and return.
+        # If still here, then no value was found or an error was encountered. Return nothing found
         return None
 
     def set_vulnerability_data(self, new_data: list[nvd_classes.CVE]) -> None:
@@ -306,6 +263,9 @@ class Cvss31Calculator:
             )
 
         self.raw_cve_data = new_data
+
+        # Update internal cwe table using new vulnerability data
+        self.build_cwe_table()
 
         return None
 
@@ -438,12 +398,24 @@ class Cvss31Calculator:
         Utility function to conduct statistical analysis against source data. Can be called multiple times against
         different IDs and will use the same data until new data is loaded from a file or the ec3.collector.
 
+        If normalization was requested, then we will attempt to find a replacement recommended CWE ID to use from
+        the class' set normalization file string. Normalization is attempting to use a CWE ID higher in the relationship
+        tree that might be more commonly used during mapping. Note that not all CWE IDs have a recommended
+        normalization ID to use as a replacement.
+
         :param cwe_id: A required integer value for the CWE ID to collect data on.
         :param normalize: A boolean value to determine whether a normalized CWE ID is used in lieu of the provided ID.
         :return The results dict includes the projected CVSS score (accounting for temporal and environmental
         modifications), the CWE ID used, min/max/mean base score CVSS values, count (of vulnerabilities mapped to the
         desired CWE ID), and the list of related CVE records.
         """
+
+        # Attempt to load the normalization CSV file, and update the cwe_id param to the normalized value if not None.
+        # The input cwe_id value should be a valid CWE identifier.
+        if normalize and self.__cwe_id_valid(cwe_id):
+            normalization_result = self.normalize_cwe(cwe_id)
+            if normalization_result:
+                cwe_id = normalization_result
 
         if self.__cwe_id_valid(cwe_id):
             score_values: list[list[float]] = []

@@ -452,7 +452,7 @@ def example_cve_data_empty_cwe() -> nvd_classes.CVE:
 def example_calculator(example_cve_data) -> ec3.calculator.Cvss31Calculator:
 
     # Initialize a non-verbose Cvss31Calculator using example data
-    test_calculator = ec3.calculator.Cvss31Calculator(125)
+    test_calculator = ec3.calculator.Cvss31Calculator()
     test_calculator.set_vulnerability_data([example_cve_data])
     test_calculator.build_cwe_table()
 
@@ -463,7 +463,7 @@ def example_calculator(example_cve_data) -> ec3.calculator.Cvss31Calculator:
 def example_results(example_cve_data) -> dict:
 
     # Initialize a non-verbose Cvss31Calculator using example data
-    test_calculator = ec3.calculator.Cvss31Calculator(125)
+    test_calculator = ec3.calculator.Cvss31Calculator()
     test_calculator.set_vulnerability_data([example_cve_data])
     test_calculator.build_cwe_table()
     ec3_results = test_calculator.calculate_results(125)
@@ -473,24 +473,8 @@ def example_results(example_cve_data) -> dict:
 
 def test_init_verbose():
     # Initialize a verbose Cvss31Calculator
-    test_calculator = ec3.calculator.Cvss31Calculator(125, True)
-    assert test_calculator.verbose == True
-
-
-def test_init_value_error():
-
-    # Cause a ValueError exception
-    with pytest.raises(ValueError):
-        # Initialize a non-verbose Cvss31Calculator with a bad numerical CWE ID value
-        test_calculator = ec3.calculator.Cvss31Calculator(-1)
-
-
-def test_cwe_id_valid_value_error(example_calculator):
-
-    # Cause a ValueError exception
-    with pytest.raises(ValueError):
-        # Pass a non-valid ID to the Cvss31Calculator constructor
-        test_calculator = ec3.calculator.Cvss31Calculator("BAD")
+    test_calculator = ec3.calculator.Cvss31Calculator(verbose=True)
+    assert test_calculator.verbose is True
 
 
 def test_build_cwe_table(example_calculator):

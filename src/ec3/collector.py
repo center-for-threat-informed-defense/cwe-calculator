@@ -6,10 +6,13 @@ Currently only supports the NVD 2.0 API via the NvdCollector class.
 Copyright (c) 2024 The MITRE Corporation. All rights reserved.
 """
 
+import pickle
 from datetime import datetime, timedelta
 
 import nvdlib  # type: ignore
 from nvdlib import classes as nvd_classes  # type: ignore
+
+from ec3 import data_default_file
 
 # Define the NVD 2.0 API's maximum number of days between parameter date ranges.
 max_date_range: int = 120
@@ -172,3 +175,30 @@ class NvdCollector:
             )
 
         return cve_search
+
+    def save_data_to_file(
+        self, new_data: list[nvd_classes.CVE], data_file_str: str | None = None
+    ) -> None:
+        """
+        Save JSON data returned from the NVD API into a pickle file that we can re-load without calling the API again.
+
+        :param new_data: A list of new vulnerability records to save to the data_file_str.
+        :param data_file_str: A filename to write the saved NVD JSON data in pickle format, preserving the NVD object.
+        :return None
+        """
+
+        if data_file_str is None:
+            if self.verbose:
+                print(
+                    f"No data_file provided, setting to default file: {data_default_file}"
+                )
+                print()  # print blank line
+            data_file_str = data_default_file
+
+        try:
+            with open(data_file_str, "wb") as pickle_fh:
+                pickle.dump(new_data, pickle_fh, pickle.HIGHEST_PROTOCOL)
+        except FileNotFoundError:
+            raise
+
+        return None

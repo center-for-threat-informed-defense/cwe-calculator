@@ -277,9 +277,52 @@ def main(arg_list: list[str] | None = None) -> None:
     else:
         target_range_end = datetime.now()
 
-    # Initialize the calculator class instance. This calculator is used to load/save vulnerability data, modify temporal
-    # and environmental metrics, and obtain results for desired CWE IDs.
-    ec3_calculator = Cvss31Calculator(cwe_id=args.cwe, verbose=args.verbose)
+    # If an update is requested and fails to save the data, we can load it from memory later
+    load_data_from_memory: bool = False
+    api_data: list[nvd_classes.CVE] = []
+
+    # If the args.update flag was passed in, then pull the most recently modified data for the date range provided.
+    # Save the pulled source data to the specified or default [data_file] location.
+    if args.update:
+        if args.verbose:
+            print("Updating from NVD API...")
+        source_collector = NvdCollector(
+            api_key=api_key,
+            target_range_start=target_range_start,
+            target_range_end=target_range_end,
+            verbose=args.verbose,
+        )
+        try:
+            api_data = source_collector.pull_target_data()
+            if args.verbose:
+                print("Saving data from API call to data file...")
+            source_collector.save_data_to_file(api_data, data_file_str=args.data_file)
+        except SSLError:
+            print("Caught SSLError. Error connecting to NVD. Exiting.")
+            return None
+        except PermissionError:
+            print(
+                "Caught PermissionError. "
+                "Unable to save NVD data to a file. Continuing with data temporarily stored in memory."
+            )
+            load_data_from_memory = True
+        except FileNotFoundError:
+            print(
+                "Caught FileNotFoundError. Desired data file path is not writeable. Unable to save data. "
+                "Continuing with data temporarily stored in memory."
+            )
+            load_data_from_memory = True
+        except Exception:
+            print("Caught unknown error while collecting and saving NVD data. Exiting.")
+            return None
+
+    # Initialize the calculator class instance. This calculator is used to load/save vulnerability data, modify
+    # temporal and environmental metrics, and obtain results for desired CWE IDs.
+    ec3_calculator = Cvss31Calculator(
+        data_file_str=args.data_file,
+        normalization_file_str=args.normalize_file,
+        verbose=args.verbose,
+    )
 
     # If a temporal or environmental metric flag was not passed in through the CLI args, it would default to None.
     # For each metric modifier: either use the passed in value, or "X" if not set.
@@ -304,57 +347,19 @@ def main(arg_list: list[str] | None = None) -> None:
         ma=args.modified_availability if args.modified_availability else "X",
     )
 
-    # If the args.update flag was passed in, then pull the most recently modified data for the date range provided.
-    # Save the pulled source data to the specified or default [data_file] location.
-    if args.update:
-        if args.verbose:
-            print("Updating from NVD API...")
-        source_collector = NvdCollector(
-            api_key=api_key,
-            target_range_start=target_range_start,
-            target_range_end=target_range_end,
-            verbose=args.verbose,
-        )
-        try:
-            ec3_calculator.set_vulnerability_data(source_collector.pull_target_data())
-            ec3_calculator.build_cwe_table()
-            if args.verbose:
-                print("Saving data from API call to data file...")
-            ec3_calculator.save_data_file(data_file_str=args.data_file)
-        except SSLError:
-            print("Caught SSLError. Error connecting to NVD. Exiting.")
-            return None
-        except PermissionError:
-            print(
-                "Caught PermissionError. "
-                "Unable to save NVD data to a file. Continuing with data temporarily stored in memory"
-            )
-        except FileNotFoundError:
-            print(
-                "Caught FileNotFoundError. Desired data file path is not writeable. Unable to save data."
-            )
-        except Exception:
-            print("Caught unknown error while collecting and saving NVD data. Exiting.")
-            return None
+    if load_data_from_memory:
+        ec3_calculator.set_vulnerability_data(new_data=api_data)
 
-    # An update was not requested. Load previously saved NVD data into the calculator's raw_cve_data internal list.
-    # Note that if an update was just performed, then this list already exists. Only perform the following load if
-    # the update wasn't performed.
-    else:
-        ec3_calculator.load_data_file(args.data_file)
-        ec3_calculator.build_cwe_table()
-
-    # If normalization was requested, then we will attempt to find a replacement recommended CWE ID to use from this
-    # file. Normalization is attempting to use a CWE ID higher in the relationship tree that might be more commonly
-    # used during mapping. Note that not all CWE IDs have a recommended normalization ID to use as a replacement.
+    # If a normalization file was provided, assume CWE ID normalization is desired.
+    normalize_ids: bool = False
     if args.normalize_file:
-        ec3_calculator.load_normalization_data(args.normalize_file)
+        normalize_ids = True
 
     # Results will be calculated for a normalized CWE ID if present. Otherwise, the default initialized CWE ID.
     # Non-normalized results can be obtained by calling ec3_calculator.calculate_results(args.cwe)
     # or ec3_calculator.calculate_results(args.cwe, False)
     ec3_results: dict = ec3_calculator.calculate_results(
-        cwe_id=args.cwe, normalize=True
+        cwe_id=args.cwe, normalize=normalize_ids
     )
     ec3_calculator.output_results(ec3_results, 4)
 

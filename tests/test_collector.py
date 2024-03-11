@@ -148,3 +148,10 @@ def test_adjust_valid_dates_swap():
     )
     assert test_collector.target_range_start <= datetime.now()
     assert test_collector.target_range_end <= datetime.now()
+
+
+def test_save_data_to_file_error(example_collector, example_cve_data):
+    with pytest.raises(FileNotFoundError):
+        example_collector.save_data_to_file(
+            new_data=[example_cve_data], data_file_str="./bad_path/bad_file_str"
+        )

@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 from nvdlib import classes as nvd_classes
 
@@ -19,11 +21,7 @@ def example_cve_data() -> nvd_classes.CVE:
             "descriptions": [
                 {
                     "lang": "en",
-                    "value": "The (1) TLS and (2) DTLS implementations in OpenSSL 1.0.1 before 1.0.1g do not properly "
-                    "handle Heartbeat Extension packets, which allows remote attackers to obtain sensitive "
-                    "information from process memory via crafted packets that trigger a buffer over-read, as "
-                    "demonstrated by reading private keys, related to d1_both.c and t1_lib.c, aka the "
-                    "Heartbleed bug.",
+                    "value": "Test",
                 },
             ],
             "metrics": {
@@ -164,11 +162,7 @@ def example_cve_data_cwe_unsure() -> nvd_classes.CVE:
             "descriptions": [
                 {
                     "lang": "en",
-                    "value": "The (1) TLS and (2) DTLS implementations in OpenSSL 1.0.1 before 1.0.1g do not properly "
-                    "handle Heartbeat Extension packets, which allows remote attackers to obtain sensitive "
-                    "information from process memory via crafted packets that trigger a buffer over-read, as "
-                    "demonstrated by reading private keys, related to d1_both.c and t1_lib.c, aka the "
-                    "Heartbleed bug.",
+                    "value": "Test",
                 },
             ],
             "metrics": {
@@ -238,11 +232,7 @@ def example_cve_data_multi_cwe() -> nvd_classes.CVE:
             "descriptions": [
                 {
                     "lang": "en",
-                    "value": "The (1) TLS and (2) DTLS implementations in OpenSSL 1.0.1 before 1.0.1g do not properly "
-                    "handle Heartbeat Extension packets, which allows remote attackers to obtain sensitive "
-                    "information from process memory via crafted packets that trigger a buffer over-read, as "
-                    "demonstrated by reading private keys, related to d1_both.c and t1_lib.c, aka the "
-                    "Heartbleed bug.",
+                    "value": "Test",
                 },
             ],
             "metrics": {
@@ -313,11 +303,7 @@ def example_cve_data_bad_cwe() -> nvd_classes.CVE:
             "descriptions": [
                 {
                     "lang": "en",
-                    "value": "The (1) TLS and (2) DTLS implementations in OpenSSL 1.0.1 before 1.0.1g do not properly "
-                    "handle Heartbeat Extension packets, which allows remote attackers to obtain sensitive "
-                    "information from process memory via crafted packets that trigger a buffer over-read, as "
-                    "demonstrated by reading private keys, related to d1_both.c and t1_lib.c, aka the "
-                    "Heartbleed bug.",
+                    "value": "Test",
                 },
             ],
             "metrics": {
@@ -388,11 +374,7 @@ def example_cve_data_empty_cwe() -> nvd_classes.CVE:
             "descriptions": [
                 {
                     "lang": "en",
-                    "value": "The (1) TLS and (2) DTLS implementations in OpenSSL 1.0.1 before 1.0.1g do not properly "
-                    "handle Heartbeat Extension packets, which allows remote attackers to obtain sensitive "
-                    "information from process memory via crafted packets that trigger a buffer over-read, as "
-                    "demonstrated by reading private keys, related to d1_both.c and t1_lib.c, aka the "
-                    "Heartbleed bug.",
+                    "value": "Test",
                 },
             ],
             "metrics": {
@@ -451,7 +433,7 @@ def example_cve_data_empty_cwe() -> nvd_classes.CVE:
 @pytest.fixture
 def example_calculator(example_cve_data) -> ec3.calculator.Cvss31Calculator:
 
-    # Initialize a non-verbose Cvss31Calculator using example data
+    # Initialize a Cvss31Calculator using example data
     test_calculator = ec3.calculator.Cvss31Calculator()
     test_calculator.set_vulnerability_data([example_cve_data])
     test_calculator.build_cwe_table()
@@ -462,19 +444,13 @@ def example_calculator(example_cve_data) -> ec3.calculator.Cvss31Calculator:
 @pytest.fixture
 def example_results(example_cve_data) -> dict:
 
-    # Initialize a non-verbose Cvss31Calculator using example data
+    # Initialize a Cvss31Calculator using example data
     test_calculator = ec3.calculator.Cvss31Calculator()
     test_calculator.set_vulnerability_data([example_cve_data])
     test_calculator.build_cwe_table()
     ec3_results = test_calculator.calculate_results(125)
 
     return ec3_results
-
-
-def test_init_verbose():
-    # Initialize a verbose Cvss31Calculator
-    test_calculator = ec3.calculator.Cvss31Calculator(verbose=True)
-    assert test_calculator.verbose is True
 
 
 def test_build_cwe_table(example_calculator):
@@ -513,13 +489,13 @@ def test_build_cwe_table_cwe_empty_value(
 
 
 def test_build_cwe_table_bad_value(
-    capsys, example_calculator, example_cve_data_bad_cwe
+    caplog, example_calculator, example_cve_data_bad_cwe
 ):
     example_calculator.set_vulnerability_data([example_cve_data_bad_cwe])
     example_calculator.build_cwe_table()
-    captured = capsys.readouterr()
-    assert str(captured.out).__contains__(
+    assert (
         "Encountered error while parsing CWE ID from vulnerability data. Skipping this entry."
+        in caplog.text
     )
 
 
@@ -532,7 +508,6 @@ def test_calculate_results(example_calculator):
 def test_calculate_results_verbose(example_calculator):
 
     # Set calculator verbose mode to get wider results.
-    example_calculator.verbose = True
     assert example_calculator.calculate_results(125) == {
         "Projected CVSS": 7.5,
         "CWE": 125,
@@ -544,44 +519,34 @@ def test_calculate_results_verbose(example_calculator):
     }
 
 
-def test_calculate_results_empty_verbose(capsys, example_calculator):
-
-    # Set calculator verbose mode to capture more edge case output.
-    example_calculator.verbose = True
+def test_calculate_results_empty_verbose(caplog, example_calculator):
+    caplog.set_level(logging.DEBUG)
     example_calculator.calculate_results(1000)
-    captured = capsys.readouterr()
-    assert str(captured.out).__contains__(
-        "No vulnerability data found for CWE ID 1000."
-    )
+    assert "No vulnerability data found for CWE ID 1000." in caplog.text
 
 
-def test_calculate_results_bad_id_verbose(capsys, example_calculator):
-
-    # Set calculator verbose mode to capture more error output.
-    example_calculator.verbose = True
+def test_calculate_results_bad_id_verbose(caplog, example_calculator):
+    caplog.set_level(logging.DEBUG)
     example_calculator.calculate_results(-1)
-    captured = capsys.readouterr()
-    assert str(captured.out).__contains__("CWE ID provided was not a usable ID.")
+    assert "CWE ID provided was not a usable ID." in caplog.text
 
 
-def test_output_results(capsys, example_calculator, example_results):
+def test_output_results(caplog, example_calculator, example_results):
+    caplog.set_level(logging.DEBUG)
+    example_calculator.output_results(example_results)
+    print(caplog.text)
+    assert "Vulnerability data found for CWE ID 125:" in caplog.text
+    assert "Projected CVSS: 7.5" in caplog.text
 
+
+def test_output_results_verbose(capsys, caplog, example_calculator, example_results):
+    caplog.set_level(logging.DEBUG)
     example_calculator.output_results(example_results)
     captured = capsys.readouterr()
-    assert str(captured.out).__contains__(
-        "Vulnerability data found for CWE ID 125. Projected CVSS: 7.5"
-    )
-
-
-def test_output_results_verbose(capsys, example_calculator, example_results):
-    example_calculator.verbose = True
-    example_calculator.output_results(example_results)
-    captured = capsys.readouterr()
-    assert str(captured.out).__contains__(
-        "Vulnerability data found for CWE ID 125:\nProjected CVSS: 7.5"
-    )
-    assert str(captured.out).__contains__(" Min: 7.5\n Max: 7.5\n Average: 7.5")
-    assert str(captured.out).__contains__("Found 1 related CVE record:\nCVE-2014-0160")
+    assert "Vulnerability data found for CWE ID 125:" in caplog.text
+    assert "Projected CVSS: 7.5" in caplog.text
+    assert " Min: 7.5\n Max: 7.5\n Average: 7.5" in captured.out
+    assert "Found 1 related CVE record:\nCVE-2014-0160" in captured.out
 
 
 def test_set_cvss_modifiers(example_calculator):

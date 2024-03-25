@@ -108,8 +108,6 @@ def example_cve_data() -> nvd_classes.CVE:
 
 @pytest.fixture
 def example_simple_args() -> list[str]:
-
-    # default non-verbose call to calculator.
     simple_args = ["125"]
 
     return simple_args
@@ -177,22 +175,21 @@ def test_args_normalized_modified(example_normalized_modified_args):
 
 @patch.object(ec3.collector.NvdCollector, "pull_target_data")
 def test_main_collector(
-    mock_pulled_data, capsys, example_collector_args, example_cve_data
+    mock_pulled_data, caplog, example_collector_args, example_cve_data
 ):
     mock_pulled_data.return_value = [example_cve_data]
     ec3.cli.main(example_collector_args)
-    captured = capsys.readouterr()
-    assert str(captured.out).__contains__(
+    assert (
         "Initialized NvdCollector to search CVEs from 2024-01-01 00:00:00 until 2024-02-01 00:00:00."
+        in caplog.text
     )
-    assert str(captured.out).__contains__("Projected CVSS: 7.5")
+    assert "Projected CVSS: 7.5" in caplog.text
 
 
 @patch.object(ec3.collector.NvdCollector, "pull_target_data")
 def test_main_simple_collector(
-    mock_pulled_data, capsys, example_simple_collector_args, example_cve_data
+    mock_pulled_data, caplog, example_simple_collector_args, example_cve_data
 ):
     mock_pulled_data.return_value = [example_cve_data]
     ec3.cli.main(example_simple_collector_args)
-    captured = capsys.readouterr()
-    assert str(captured.out).__contains__("Projected CVSS: 7.5")
+    assert "Projected CVSS: 7.5" in caplog.text

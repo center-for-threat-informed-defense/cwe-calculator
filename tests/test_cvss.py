@@ -204,7 +204,6 @@ def example_base_cvss() -> ec3.cvss.Cvss31:
         c="H",
         i="N",
         a="N",
-        verbose=True,
     )
 
     return base_cvss
@@ -240,7 +239,6 @@ def example_full_cvss() -> ec3.cvss.Cvss31:
         mc="L",
         mi="L",
         ma="L",
-        verbose=True,
     )
 
     return full_cvss

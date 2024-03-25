@@ -1,14 +1,17 @@
 """
-The Environmental CWE CVSS Calculator (ec3) is used to calculate a potential CVSS score for a provided CWE
-Identifier. Data from the National Vulnerability Database(NVD) is pulled via the 2.0 API and stored for later re-use.
+The Environmental CWE CVSS Calculator (ec3) is used to calculate a potential CVSS score
+for a provided CWE Identifier. Data from the National Vulnerability Database(NVD) is
+pulled via the 2.0 API and stored for later re-use.
 
-This is the command line interface entry point for ec3. When called, it obtains the arguments from the command line and
-initializes the collector and calculator classes. When completed it prints any results found.
+This is the command line interface entry point for ec3. When called, it obtains the
+arguments from the command line and initializes the collector and calculator classes.
+When completed, it prints any results found.
 
 Copyright (c) 2024 The MITRE Corporation. All rights reserved.
 """
 
 import argparse
+import logging
 import pathlib
 from datetime import datetime, timedelta
 
@@ -27,35 +30,55 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
 
     CLI options:
         (Required) cwe: An integer for the desired CWE to be calculated.
-        (optional) data-file: A string pointing to a pickle file that contains NVD JSON 2.0 data.
-        (optional) normalize-file: A string pointing to a two column CSV file that contains the normalization data.
-        (optional) update: A flag to signal a request to pull new data from NVD. Utilizes optional api-key,
-            time-range-start, and time-range-end values if available.
-        (optional) start-date - A date formatted string (MM-DD-YYYY). Date must be 1-1-2020 or after.
-        (optional) end-date - A date formatted string (MM-DD-YYYY). Date must be the current date or earlier.
-        (optional) verbose - A flag to enable more detailed messages in the console.
+        (optional) data-file: A string pointing to a pickle file that contains NVD
+            JSON 2.0 data.
+        (optional) normalize-file: A string pointing to a two column CSV file that
+            contains the normalization data.
+        (optional) update: A flag to signal a request to pull new data from NVD.
+            Utilizes optional api-key, start-date, and end-date values if available.
+        (optional) start-date - A date formatted string (YYYY-MM-DD). Date must be
+            2020-1-1 or after.
+        (optional) end-date - A date formatted string (YYYY-MM-DD). Date must be the
+            current date or earlier.
+        (optional) verbose - A flag to enable more detailed messages in the log.
 
         Mutually exclusive:
-        (optional) key - A string value corresponding to the user's NVD API key. Usage improves API rate limits.
-        (optional) keyfile - A string identifying a file that contains the NVD API key string.
+        (optional) key - A string value corresponding to the user's NVD API key. Usage
+            improves API rate limits.
+        (optional) keyfile - A string identifying a file that contains the NVD API
+            key string.
 
         Temporal modification metrics:
-        (optional) exploit-code-maturity - A string representing the exploit code maturity (E) metric.
-        (optional) remediation-level - A string representing the remediation level (RL) metric.
-        (optional) report-confidence - A string representing the report confidence (RC) metric.
+        (optional) exploit-code-maturity - A string representing the exploit code
+            maturity (E) metric.
+        (optional) remediation-level - A string representing the remediation
+            level (RL) metric.
+        (optional) report-confidence - A string representing the report
+            confidence (RC) metric.
 
         Environmental modification metrics:
-        (optional) confidentiality-requirement - A string representing the confidentiality requirement (CR) metric.
-        (optional) integrity-requirement - A string representing the integrity requirement (IR) metric.
-        (optional) availability-requirement - A string representing the availability requirement (AR) metric.
-        (optional) modified-attack-vector - A string representing the modified attack vector (MAV) metric.
-        (optional) modified-attack-complexity - A string representing the modified attack complexity (MAC) metric.
-        (optional) modified-privileges-required - A string representing the modified privileges required (MPR) metric.
-        (optional) modified-user-interaction - A string representing the modified user interaction (MUI) metric.
-        (optional) modified-scope - A string representing the modified scope (MS) metric.
-        (optional) modified-confidentiality - A string representing the modified confidentiality (MC) metric.
-        (optional) modified-integrity - A string representing the modified integrity (MI) metric.
-        (optional) modified-availability - A string representing the modified availability (MA) metric.
+        (optional) confidentiality-requirement - A string representing the
+            confidentiality requirement (CR) metric.
+        (optional) integrity-requirement - A string representing the integrity
+            requirement (IR) metric.
+        (optional) availability-requirement - A string representing the availability
+            requirement (AR) metric.
+        (optional) modified-attack-vector - A string representing the modified attack
+            vector (MAV) metric.
+        (optional) modified-attack-complexity - A string representing the modified
+            attack complexity (MAC) metric.
+        (optional) modified-privileges-required - A string representing the modified
+            privileges required (MPR) metric.
+        (optional) modified-user-interaction - A string representing the modified user
+            interaction (MUI) metric.
+        (optional) modified-scope - A string representing the modified scope (MS)
+            metric.
+        (optional) modified-confidentiality - A string representing the modified
+            confidentiality (MC) metric.
+        (optional) modified-integrity - A string representing the modified
+            integrity (MI) metric.
+        (optional) modified-availability - A string representing the modified
+            availability (MA) metric.
 
     Returns:
         An argparse.Namespace object holding all attributes provided.
@@ -91,7 +114,8 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     )
     update_group.add_argument(
         "--start-date",
-        help="Date of earliest NVD data desired. Date must be 2020-1-1 or after. Expected format is YYYY-MM-DD.",
+        help="Date of earliest NVD data desired. Date must be 2020-1-1 or after. "
+        "Expected format is YYYY-MM-DD.",
         action="store",
         type=str,
     )
@@ -104,7 +128,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--verbose",
         "-v",
-        help="Flag to enable verbose output.",
+        help="Flag to enable verbose logging.",
         action="store_true",
     )
 
@@ -227,14 +251,40 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         choices=["X", "N", "L", "H"],
     )
 
-    # The argparse class' parse_args function will interpret a list of strings as the provided parameters.
-    # If this list of inputs is not explicitly provided, then the default behavior is to use sys.argv (the list
-    # of arguments passed to the called python script) as this list of string inputs.
+    # The argparse class' parse_args function will interpret a list of strings as the
+    # provided parameters. If this list of inputs is not explicitly provided, then the
+    # default behavior is to use sys.argv (the list of arguments passed to the called
+    # python script) as this list of string inputs.
     return parser.parse_args(arg_list)
 
 
+def _setup_logging(verbose: bool = False) -> None:
+    """Configure logging.
+
+    Args:
+        verbose: Boolean value representing whether to use the more verbose
+            logging.DEBUG over the default logging.INFO
+
+    Returns:
+        None
+    """
+
+    log_level = logging.DEBUG if verbose else logging.INFO
+    log_format = "%(asctime)s [%(name)s] %(levelname)s: %(message)s"
+    log_date_format = "%Y-%m-%d %H:%M:%S"
+    log_formatter = logging.Formatter(log_format, log_date_format)
+
+    # Use default StreamHandler of sys.stderr.
+    log_handler = logging.StreamHandler()
+    log_handler.setFormatter(log_formatter)
+    logger = logging.getLogger()
+    logger.addHandler(log_handler)
+    logger.setLevel(log_level)
+
+
 def main(arg_list: list[str] | None = None) -> None:
-    """Orchestrate the collection and evaluation of NVD vulnerability data using ec3 classes.
+    """Orchestrate the collection and evaluation of NVD vulnerability data using
+        ec3 classes.
 
     Args:
         arg_list: Optional input argument list to pass to parse_args.
@@ -245,31 +295,32 @@ def main(arg_list: list[str] | None = None) -> None:
 
     # Parse CLI arguments
     args = parse_args(arg_list)
-    if args.verbose:
-        print("*** Environmental CWE CVSS Calculator (ec3) ***")
-        print()  # print blank line
-        print(f"Input arguments: {args}")
-        print()  # print blank line
 
-    # Attempt to set the api_key value from the key argument directly, or load from a specified file. The api_key is
-    # used to increase the rate limits of the NVD API during collection. Setting this value without the update flag
-    # would have no effect.
+    _setup_logging(args.verbose)
+
+    logging.debug("*** Environmental CWE CVSS Calculator (ec3) ***")
+    logging.debug(f"Input arguments: {args}")
+
+    # Attempt to set the api_key value from the key argument directly, or load from a
+    # specified file. The api_key is used to increase the rate limits of the NVD API
+    # during collection. Setting this value without the update flag would have
+    # no effect.
     api_key = args.key
     if args.keyfile:
         try:
             with open(args.keyfile) as f:
                 api_key = f.read().rstrip("\n")
         except PermissionError:
-            print("Caught PermissionError. Unable to open keyfile. Exiting.")
+            logging.error("Caught PermissionError. Unable to open keyfile. Exiting.")
             return None
 
-    # Parse values for start_date and end_date. These values set the bounds for the NVD API data
-    # acquisition by passing them to their respective lastModStartDate and lastModEndDate API parameters. The collector
-    # automatically handles ranges larger than the ec3.collector.max_date_range global variable. Expected date
-    # format is MM - DD - YYYY.
-    # If the start_date is not provided then set it to the current date minus the
-    # [ec3.collector.date_difference_default] global variable. If the end_date is not provided then set it to
-    # the current date.
+    # Parse values for start_date and end_date. These values set the bounds for the
+    # NVD API data acquisition by passing them to their respective pubStartDate and
+    # pubEndDate API parameters. The collector automatically handles ranges larger
+    # than the ec3.collector.max_date_range global variable. Expected date format
+    # is 'YYYY-MM-DD'. If the start_date is not provided then set it to the current
+    # date minus the [ec3.collector.date_difference_default] global variable. If the
+    # end_date is not provided then set it to the current date.
     if args.start_date:
         start_date = datetime.strptime(args.start_date, "%Y-%m-%d")
     else:
@@ -279,57 +330,61 @@ def main(arg_list: list[str] | None = None) -> None:
     else:
         end_date = datetime.now()
 
-    # Initialize variable to hold vulnerability data in memory. If an update is requested and fails to save the data,
-    # we can load it directly into the Cvss31Calculator class from memory.
+    # Initialize variable to hold vulnerability data in memory. If an update is
+    # requested and fails to save the data, load it directly into the Cvss31Calculator
+    # class from memory.
     api_data: list[nvd_classes.CVE] = []
     load_data_from_memory: bool = False
 
-    # If the args.update flag was passed in, then pull the most recently modified data for the date range provided.
-    # Save the pulled source data to the specified or default [data_file] location.
+    # If the args.update flag was passed in, then pull the most recently modified data
+    # for the date range provided. Save the pulled source data to the specified or
+    # default [data_file] location.
     if args.update:
-        if args.verbose:
-            print("Updating from NVD API...")
+        logging.debug("Updating from NVD API...")
         source_collector = NvdCollector(
             api_key=api_key,
             start_date=start_date,
             end_date=end_date,
-            verbose=args.verbose,
         )
         try:
             api_data = source_collector.pull_target_data()
-            if args.verbose:
-                print("Saving data from API call to data file...")
+            logging.debug("Saving data from API call to data file...")
             source_collector.save_data_to_file(api_data, data_file_str=args.data_file)
         except SSLError:
-            print("Caught SSLError. Error connecting to NVD. Exiting.")
+            logging.error("Caught SSLError. Error connecting to NVD. Exiting.")
             return None
         except PermissionError:
-            print(
+            logging.warning(
                 "Caught PermissionError. "
-                "Unable to save NVD data to a file. Continuing with data temporarily stored in memory."
+                "Unable to save NVD data to a file. "
+                "Continuing with data temporarily stored in memory."
             )
             load_data_from_memory = True
         except FileNotFoundError:
-            print(
-                "Caught FileNotFoundError. Desired data file path is not writeable. Unable to save data. "
+            logging.warning(
+                "Caught FileNotFoundError. Desired data file path is not writeable. "
+                "Unable to save data. "
                 "Continuing with data temporarily stored in memory."
             )
             load_data_from_memory = True
         except Exception:
-            print("Caught unknown error while collecting and saving NVD data. Exiting.")
+            logging.error(
+                "Caught unknown error while collecting and saving NVD data. Exiting."
+            )
             return None
 
-    # Initialize the calculator class instance. This calculator is used to load/save vulnerability data, modify
-    # temporal and environmental metrics, and obtain results for desired CWE IDs.
+    # Initialize the calculator class instance. This calculator is used to load/save
+    # vulnerability data, modify temporal and environmental metrics, and obtain results
+    # for desired CWE IDs.
     ec3_calculator = Cvss31Calculator(
         data_file_str=args.data_file,
         normalization_file_str=args.normalize_file,
-        verbose=args.verbose,
     )
 
-    # If temporal or environmental flags were provided by the user, then update the calculator with them and rebuild
-    # the data table. Note that if an individual metric flag is not provided by the user, then it would default to
-    # None and the CVSS modifier flag should be set to "X".
+    # If temporal or environmental flags were provided by the user, then update the
+    # calculator with them and rebuild the data table. Note that if an individual
+    # metric flag is not provided by the user, then it would default to None and the
+    # CVSS modifier flag should be set to "X".
     ec3_calculator.set_cvss_modifiers(
         e=args.exploit_code_maturity if args.exploit_code_maturity else "X",
         rl=args.remediation_level if args.remediation_level else "X",
@@ -351,8 +406,8 @@ def main(arg_list: list[str] | None = None) -> None:
         ma=args.modified_availability if args.modified_availability else "X",
     )
 
-    # If there was an error saving the data file during update then there is newer data still stored in memory.
-    # Load this data into the calculator.
+    # If there was an error saving the data file during update then there is newer data
+    # still stored in memory. Load this data into the calculator.
     if load_data_from_memory:
         ec3_calculator.set_vulnerability_data(new_data=api_data)
 
@@ -361,8 +416,9 @@ def main(arg_list: list[str] | None = None) -> None:
     if args.normalize_file:
         normalize_ids = True
 
-    # Results will be calculated for a normalized CWE ID if present. Otherwise, the default initialized CWE ID.
-    # Non-normalized results can be obtained by calling ec3_calculator.calculate_results(args.cwe)
+    # Results will be calculated for a normalized CWE ID if present. Otherwise, the
+    # default initialized CWE ID. Non-normalized results can be obtained by
+    # calling ec3_calculator.calculate_results(args.cwe)
     # or ec3_calculator.calculate_results(args.cwe, False)
     ec3_results: dict = ec3_calculator.calculate_results(
         cwe_id=args.cwe, normalize=normalize_ids
@@ -373,8 +429,10 @@ def main(arg_list: list[str] | None = None) -> None:
 
 
 if __name__ == "__main__":  # pragma: no cover
-    """The ec3.calculator entry point when run as a standalone application. The __main__ section logic check is in
-    place for when ec3 will be executed directly as a script.
+    """The ec3.calculator entry point when run as a standalone application.
+
+    The __main__ section logic check is in place for when ec3 will be executed
+    directly as a script.
     """
 
     main()

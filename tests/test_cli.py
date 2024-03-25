@@ -4,7 +4,6 @@ import ec3.cli
 import ec3.collector
 import ec3.calculator
 from mock import patch
-from datetime import datetime, timedelta
 from nvdlib import classes as nvd_classes
 
 
@@ -120,9 +119,9 @@ def example_simple_args() -> list[str]:
 def example_normalized_modified_args() -> list[str]:
     normalized_modified_args = [
         "121",
-        "--data_file",
+        "--data-file",
         ".\\data\\nvd_loaded.pickle",
-        "--normalize_file",
+        "--normalize-file",
         ".\\data\\normalized.csv",
         "-v",
         "-e",
@@ -141,10 +140,10 @@ def example_collector_args() -> list[str]:
         "--update",
         "--key",
         "test_api_key",
-        "--target_range_start",
-        "01-01-2024",
-        "--target_range_end",
-        "02-01-2024",
+        "--start-date",
+        "2024-01-01",
+        "--end-date",
+        "2024-02-01",
         "-v",
     ]
 

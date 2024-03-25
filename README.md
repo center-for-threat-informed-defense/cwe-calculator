@@ -12,11 +12,10 @@ This work was inspired by the methodologies used for calculating the
 **Table Of Contents:**
 
 - [Getting Started](#getting-started)
+- [Getting Involved](#getting-involved)
 - [Questions and Feedback](#questions-and-feedback)
 - [How Do I Contribute?](#how-do-i-contribute)
 - [Notice](#notice)
-
-<!-- - [Getting Involved](#getting-involved) -->
 
 ## Getting Started
 
@@ -31,6 +30,14 @@ provided mappings and is more likely to be used.
 
 ### Installing ec3
 
+From your local directory containing ec3, use one of the following commands to install the required dependencies:
+
+#### Installing with poetry
+
+`poetry install`
+
+#### Installing with pip
+
 From your local directory containing ec3, run the following command to install the required dependencies:
 
 `pip install .`
@@ -39,17 +46,17 @@ From your local directory containing ec3, run the following command to install t
 
 You may see all the available command line flags by running the following from the project root:
 
-`python ./src/ec3/cli.py --help`
+`ec3-cli --help`
 
 Some examples of common commands would include:
 
-`python ./src/ec3/cli.py 787`
+`ec3-cli 787`
 
-`python ./src/ec3/cli.py 121 -v`
+`ec3-cli 121 -v`
 
-`python ./src/ec3/cli.py 121 --normalize_file ./data/normalized.csv -v`
+`ec3-cli 121 --normalize_file ./data/normalized.csv -v`
 
-`python ./src/ec3/cli.py 787 -e U -mpr H -v`
+`ec3-cli 787 -e U -mpr H -v`
 
 | Resource                                                                        | Description                                                                      |
 |---------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
@@ -57,15 +64,13 @@ Some examples of common commands would include:
 | [NVD API Rate Limits](https://nvd.nist.gov/developers/start-here#divRateLimits) | Description of the NVD API rate limits                                           |
 | [CWE-1003](https://cwe.mitre.org/data/definitions/1003.html)                    | CWE View 1003 ("Weaknesses for Simplified Mapping of Published Vulnerabilities") |
 
-<!--
 ## Getting Involved
 
 There are several ways that you can get involved with this project and help
 advance threat-informed defense:
 
-- **Way to get involved 1.** 
-- **Way to get involved 2.** Contribute to the [nvdlib](https://github.com/Vehemont/nvdlib) project.
--->
+- Join the MITRE Engenuity Center for Threat Informed
+  Defense [Discourse channel](https://center-for-threat-informed-defense.discourse.group/)
 
 ## Questions and Feedback
 

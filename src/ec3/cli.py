@@ -20,43 +20,45 @@ from ec3.collector import NvdCollector, date_difference_default
 
 
 def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
-    """
-    Create the argument parser and parse the arguments
+    """Create the argument parser and parse the arguments
 
-    Available arguments:
-    (Required) cwe - An integer for the desired CWE to be calculated.
-    (optional) data_file - A string pointing to a pickle file that contains NVD JSON 2.0 data.
-    (optional) normalize_file - A string pointing to a two column CSV file that contains the normalization data.
-    (optional) update - A flag to signal a request to pull new data from NVD. Utilizes optional api_key,
-    time_range_start, and time_range_end values if available.
-    (optional) target_range_start - A date formatted string (MM-DD-YYYY). Date must be 1-1-2020 or after.
-    (optional) target_range_end - A date formatted string (MM-DD-YYYY). Date must be the current date or earlier.
-    (optional) verbose - A flag to enable more detailed messages in the console.
+    Args:
+        arg_list: An optional list of strings to represent input CLI arguments.
 
-    Mutually exclusive:
-    (optional) key - A string value corresponding to the user's NVD API key. Usage improves API rate limits.
-    (optional) keyfile - A string identifying a file that contains the NVD API key string.
+    CLI options:
+        (Required) cwe: An integer for the desired CWE to be calculated.
+        (optional) data-file: A string pointing to a pickle file that contains NVD JSON 2.0 data.
+        (optional) normalize-file: A string pointing to a two column CSV file that contains the normalization data.
+        (optional) update: A flag to signal a request to pull new data from NVD. Utilizes optional api-key,
+            time-range-start, and time-range-end values if available.
+        (optional) start-date - A date formatted string (MM-DD-YYYY). Date must be 1-1-2020 or after.
+        (optional) end-date - A date formatted string (MM-DD-YYYY). Date must be the current date or earlier.
+        (optional) verbose - A flag to enable more detailed messages in the console.
 
-    Temporal modification metrics:
-    (optional) exploit_code_maturity - A string representing the exploit code maturity (E) metric.
-    (optional) remediation_level - A string representing the remediation level (RL) metric.
-    (optional) report_confidence - A string representing the report confidence (RC) metric.
+        Mutually exclusive:
+        (optional) key - A string value corresponding to the user's NVD API key. Usage improves API rate limits.
+        (optional) keyfile - A string identifying a file that contains the NVD API key string.
 
-    Environmental modification metrics:
-    (optional) confidentiality_requirement - A string representing the confidentiality requirement (CR) metric.
-    (optional) integrity_requirement - A string representing the integrity requirement (IR) metric.
-    (optional) availability_requirement - A string representing the availability requirement (AR) metric.
-    (optional) modified_attack_vector - A string representing the modified attack vector (MAV) metric.
-    (optional) modified_attack_complexity - A string representing the modified attack complexity (MAC) metric.
-    (optional) modified_privileges_required - A string representing the modified privileges required (MPR) metric.
-    (optional) modified_user_interaction - A string representing the modified user interaction (MUI) metric.
-    (optional) modified_scope - A string representing the modified scope (MS) metric.
-    (optional) modified_confidentiality - A string representing the modified confidentiality (MC) metric.
-    (optional) modified_integrity - A string representing the modified integrity (MI) metric.
-    (optional) modified_availability - A string representing the modified availability (MA) metric.
+        Temporal modification metrics:
+        (optional) exploit-code-maturity - A string representing the exploit code maturity (E) metric.
+        (optional) remediation-level - A string representing the remediation level (RL) metric.
+        (optional) report-confidence - A string representing the report confidence (RC) metric.
 
-    :param arg_list: Optional input argument list.
-    :return argparse.Namespace object holding all attributes provided.
+        Environmental modification metrics:
+        (optional) confidentiality-requirement - A string representing the confidentiality requirement (CR) metric.
+        (optional) integrity-requirement - A string representing the integrity requirement (IR) metric.
+        (optional) availability-requirement - A string representing the availability requirement (AR) metric.
+        (optional) modified-attack-vector - A string representing the modified attack vector (MAV) metric.
+        (optional) modified-attack-complexity - A string representing the modified attack complexity (MAC) metric.
+        (optional) modified-privileges-required - A string representing the modified privileges required (MPR) metric.
+        (optional) modified-user-interaction - A string representing the modified user interaction (MUI) metric.
+        (optional) modified-scope - A string representing the modified scope (MS) metric.
+        (optional) modified-confidentiality - A string representing the modified confidentiality (MC) metric.
+        (optional) modified-integrity - A string representing the modified integrity (MI) metric.
+        (optional) modified-availability - A string representing the modified availability (MA) metric.
+
+    Returns:
+        An argparse.Namespace object holding all attributes provided.
     """
 
     parser = argparse.ArgumentParser(description="Environmental CWE CVSS Calculator")
@@ -67,14 +69,14 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         type=int,
     )
     parser.add_argument(
-        "--data_file",
+        "--data-file",
         "-d",
         help="Path to the CVE data pickle file to parse",
         action="store",
         type=pathlib.Path,
     )
     parser.add_argument(
-        "--normalize_file",
+        "--normalize-file",
         "-n",
         help="Path to the normalization CSV file to parse",
         action="store",
@@ -88,14 +90,14 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         action="store_true",
     )
     update_group.add_argument(
-        "--target_range_start",
-        help="Date of earliest NVD data desired. Date must be 1-1-2020 or after. Expected format is MM-DD-YYYY.",
+        "--start-date",
+        help="Date of earliest NVD data desired. Date must be 2020-1-1 or after. Expected format is YYYY-MM-DD.",
         action="store",
         type=str,
     )
     update_group.add_argument(
-        "--target_range_end",
-        help="Date of most recent NVD data desired. Expected format is MM-DD-YYYY.",
+        "--end-date",
+        help="Date of most recent NVD data desired. Expected format is YYYY-MM-DD.",
         action="store",
         type=str,
     )
@@ -110,13 +112,13 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     key_group = update_group.add_mutually_exclusive_group()
     key_group.add_argument(
         "--key",
-        help="NVD api_key string.",
+        help="NVD api-key string.",
         action="store",
         type=str,
     )
     key_group.add_argument(
         "--keyfile",
-        help="Filename containing NVD api_key string",
+        help="Filename containing NVD api-key string",
         action="store",
         type=pathlib.Path,
     )
@@ -124,23 +126,23 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     # Allow for individual temporal CVSS metrics to be passed in.
     temporal_group = parser.add_argument_group(title="Temporal Metrics")
     temporal_group.add_argument(
-        "--exploit_code_maturity",
+        "--exploit-code-maturity",
         "-e",
-        help="Temporal exploit code maturity (E) metric. (Expected values: X, H, F, P, U)",
+        help="Temporal exploit code maturity (E) metric.",
         type=str,
         choices=["X", "H", "F", "P", "U"],
     )
     temporal_group.add_argument(
-        "--remediation_level",
+        "--remediation-level",
         "-rl",
-        help="Temporal remediation level (RL) metric. (Expected values: X, U, W, T, O)",
+        help="Temporal remediation level (RL) metric.",
         type=str,
         choices=["X", "U", "W", "T", "O"],
     )
     temporal_group.add_argument(
-        "--report_confidence",
+        "--report-confidence",
         "-rc",
-        help="Temporal report confidence (RC) metric. (Expected values: X, C, R, U)",
+        help="Temporal report confidence (RC) metric.",
         type=str,
         choices=["X", "C", "R", "U"],
     )
@@ -148,79 +150,79 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     # Allow for individual environmental modified impact CVSS metrics to be passed in.
     environmental_group = parser.add_argument_group(title="Environmental Metrics")
     environmental_group.add_argument(
-        "--confidentiality_requirement",
+        "--confidentiality-requirement",
         "-cr",
-        help="Environmental confidentiality requirement (CR) metric. (Expected values:  X, H, M, L)",
+        help="Environmental confidentiality requirement (CR) metric.",
         type=str,
         choices=["X", "H", "M", "L"],
     )
     environmental_group.add_argument(
-        "--integrity_requirement",
+        "--integrity-requirement",
         "-ir",
-        help="Environmental integrity requirement (IR) metric. (Expected values:  X, H, M, L)",
+        help="Environmental integrity requirement (IR) metric.",
         type=str,
         choices=["X", "H", "M", "L"],
     )
     environmental_group.add_argument(
-        "--availability_requirement",
+        "--availability-requirement",
         "-ar",
-        help="Environmental availability requirement (AR) metric. (Expected values:  X, H, M, L)",
+        help="Environmental availability requirement (AR) metric.",
         type=str,
         choices=["X", "H", "M", "L"],
     )
     environmental_group.add_argument(
-        "--modified_attack_vector",
+        "--modified-attack-vector",
         "-mav",
-        help="Environmental modified attack complexity (MAC) metric. (Expected values:  X, N, A, L, P)",
+        help="Environmental modified attack complexity (MAC) metric.",
         type=str,
         choices=["X", "N", "A", "L", "P"],
     )
     environmental_group.add_argument(
-        "--modified_attack_complexity",
+        "--modified-attack-complexity",
         "-mac",
-        help="Environmental modified attack complexity (MAC) metric. (Expected values:  X, L, H)",
+        help="Environmental modified attack complexity (MAC) metric.",
         type=str,
         choices=["X", "L", "H"],
     )
     environmental_group.add_argument(
-        "--modified_privileges_required",
+        "--modified-privileges-required",
         "-mpr",
-        help="Environmental modified privileges required (MPR) metric. (Expected values:  X, N, L, H)",
+        help="Environmental modified privileges required (MPR) metric.",
         type=str,
         choices=["X", "N", "L", "H"],
     )
     environmental_group.add_argument(
-        "--modified_user_interaction",
+        "--modified-user-interaction",
         "-mui",
-        help="Environmental modified user interaction (MUI) metric. (Expected values:  X, N, R)",
+        help="Environmental modified user interaction (MUI) metric.",
         type=str,
         choices=["X", "N", "R"],
     )
     environmental_group.add_argument(
-        "--modified_scope",
+        "--modified-scope",
         "-ms",
-        help="Environmental modified scope (MS) metric. (Expected values:  X, U, C)",
+        help="Environmental modified scope (MS) metric.",
         type=str,
         choices=["X", "U", "C"],
     )
     environmental_group.add_argument(
-        "--modified_confidentiality",
+        "--modified-confidentiality",
         "-mc",
-        help="Environmental modified confidentiality (MC) metric. (Expected values:  X, N, L, H)",
+        help="Environmental modified confidentiality (MC) metric.",
         type=str,
         choices=["X", "N", "L", "H"],
     )
     environmental_group.add_argument(
-        "--modified_integrity",
+        "--modified-integrity",
         "-mi",
-        help="Environmental modified integrity (MI) metric. (Expected values: X, N, L, H)",
+        help="Environmental modified integrity (MI) metric.",
         type=str,
         choices=["X", "N", "L", "H"],
     )
     environmental_group.add_argument(
-        "--modified_availability",
+        "--modified-availability",
         "-ma",
-        help="Environmental modified availability (MA) metric. (Expected values: X, N, L, H)",
+        help="Environmental modified availability (MA) metric.",
         type=str,
         choices=["X", "N", "L", "H"],
     )
@@ -232,11 +234,13 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
 
 
 def main(arg_list: list[str] | None = None) -> None:
-    """
-    This function orchestrates the collection and evaluation of NVD vulnerability data using ec3 classes.
+    """Orchestrate the collection and evaluation of NVD vulnerability data using ec3 classes.
 
-    :param arg_list: Optional input argument list to pass to parse_args.
-    :return: None
+    Args:
+        arg_list: Optional input argument list to pass to parse_args.
+
+    Returns:
+        None
     """
 
     # Parse CLI arguments
@@ -259,27 +263,26 @@ def main(arg_list: list[str] | None = None) -> None:
             print("Caught PermissionError. Unable to open keyfile. Exiting.")
             return None
 
-    # Parse values for target_range_start and target_range_end. These values set the bounds for the NVD API data
+    # Parse values for start_date and end_date. These values set the bounds for the NVD API data
     # acquisition by passing them to their respective lastModStartDate and lastModEndDate API parameters. The collector
     # automatically handles ranges larger than the ec3.collector.max_date_range global variable. Expected date
     # format is MM - DD - YYYY.
-
-    # If the target_range_start is not provided then set it to the current date minus the
-    # [ec3.collector.date_difference_default] global variable. If the target_range_end is not provided then set it to
+    # If the start_date is not provided then set it to the current date minus the
+    # [ec3.collector.date_difference_default] global variable. If the end_date is not provided then set it to
     # the current date.
-
-    if args.target_range_start:
-        target_range_start = datetime.strptime(args.target_range_start, "%m-%d-%Y")
+    if args.start_date:
+        start_date = datetime.strptime(args.start_date, "%Y-%m-%d")
     else:
-        target_range_start = datetime.now() - timedelta(days=date_difference_default)
-    if args.target_range_end:
-        target_range_end = datetime.strptime(args.target_range_end, "%m-%d-%Y")
+        start_date = datetime.now() - timedelta(days=date_difference_default)
+    if args.end_date:
+        end_date = datetime.strptime(args.end_date, "%Y-%m-%d")
     else:
-        target_range_end = datetime.now()
+        end_date = datetime.now()
 
-    # If an update is requested and fails to save the data, we can load it from memory later
-    load_data_from_memory: bool = False
+    # Initialize variable to hold vulnerability data in memory. If an update is requested and fails to save the data,
+    # we can load it directly into the Cvss31Calculator class from memory.
     api_data: list[nvd_classes.CVE] = []
+    load_data_from_memory: bool = False
 
     # If the args.update flag was passed in, then pull the most recently modified data for the date range provided.
     # Save the pulled source data to the specified or default [data_file] location.
@@ -288,8 +291,8 @@ def main(arg_list: list[str] | None = None) -> None:
             print("Updating from NVD API...")
         source_collector = NvdCollector(
             api_key=api_key,
-            target_range_start=target_range_start,
-            target_range_end=target_range_end,
+            start_date=start_date,
+            end_date=end_date,
             verbose=args.verbose,
         )
         try:
@@ -324,8 +327,9 @@ def main(arg_list: list[str] | None = None) -> None:
         verbose=args.verbose,
     )
 
-    # If a temporal or environmental metric flag was not passed in through the CLI args, it would default to None.
-    # For each metric modifier: either use the passed in value, or "X" if not set.
+    # If temporal or environmental flags were provided by the user, then update the calculator with them and rebuild
+    # the data table. Note that if an individual metric flag is not provided by the user, then it would default to
+    # None and the CVSS modifier flag should be set to "X".
     ec3_calculator.set_cvss_modifiers(
         e=args.exploit_code_maturity if args.exploit_code_maturity else "X",
         rl=args.remediation_level if args.remediation_level else "X",
@@ -347,6 +351,8 @@ def main(arg_list: list[str] | None = None) -> None:
         ma=args.modified_availability if args.modified_availability else "X",
     )
 
+    # If there was an error saving the data file during update then there is newer data still stored in memory.
+    # Load this data into the calculator.
     if load_data_from_memory:
         ec3_calculator.set_vulnerability_data(new_data=api_data)
 
@@ -367,9 +373,8 @@ def main(arg_list: list[str] | None = None) -> None:
 
 
 if __name__ == "__main__":  # pragma: no cover
-    """
-    This is the ec3.calculator entry point when run as a standalone application. The __main__ section logic check is in
-    place for when ec3 will be executed directly as a script."
+    """The ec3.calculator entry point when run as a standalone application. The __main__ section logic check is in
+    place for when ec3 will be executed directly as a script.
     """
 
     main()

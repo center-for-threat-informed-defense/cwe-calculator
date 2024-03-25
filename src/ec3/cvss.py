@@ -1,5 +1,8 @@
-"""
-Utility class to handle CVSS 3.1 structures and calculations
+"""Utility class to handle CVSS structures and calculations.
+
+Currently only supports the CVSS 3.1 format via the Cvss31 class.
+
+
 
 Copyright (c) 2024 The MITRE Corporation. All rights reserved.
 """
@@ -10,17 +13,17 @@ from nvdlib import classes as nvd_classes  # type: ignore
 
 
 class Cvss31:
-    """
-    Wrapper class to set individual fields covering the CVSS 3.1 model (base/temporal/environmental)
+    """Set individual fields covering the CVSS 3.1 model (base/temporal/environmental).
+
     All fields should be represented by the uppercase shorthand letter value internally.
     Some long form values are accepted in multiple representations due to differences between the specification
     documentation and the NVD API return results.
 
+    Set an optional verbose flag to display more details.
+
     Values sourced from:
         https://csrc.nist.gov/schema/nvd/api/2.0/external/cvss-v3.1.json
         https://www.first.org/cvss/v3.1/specification-document
-
-    Optional verbose flag to display more details.
     """
 
     __version: str = "3.1"
@@ -107,41 +110,48 @@ class Cvss31:
         ma: str = "X",
         verbose: bool = False,
     ) -> None:
-        """
-        Initialize default values, validate all fields passed in through individual setter functions.
+        """Initialize default values, validate all fields passed in through individual setter functions.
+
         Accepts shorthand character or case-insensitive full text representation.
         (e.g. 'N'/'NETWORK'/'network' for AV field)
 
-        Base exploitability/impact metrics:
-        Note: The default value of "X" will throw a ValueError while setting the value. This value must be valid.
-        :param av: Attack Vector (AV)
-        :param ac: Attack Complexity (AC)
-        :param pr: Privileges Required (PR)
-        :param ui: User Interaction (UI)
-        :param s: Scope (S)
-        :param c: Confidentiality (C)
-        :param i: Integrity (I)
-        :param a: Availability (A)
+        Args:
+            //Base exploitability/impact metrics. Note: The default value of "X" will throw a ValueError during setting.
+            av: Attack Vector (AV)
+            ac: Attack Complexity (AC)
+            pr: Privileges Required (PR)
+            ui: User Interaction (UI)
+            s: Scope (S)
+            c: Confidentiality (C)
+            i: Integrity (I)
+            a: Availability (A)
 
-        Temporal metrics:
-        :param e: Exploit Code Maturity (E)
-        :param rl: Remediation Level (RL)
-        :param rc: Report Confidence (RC)
+            //Temporal metrics:
+            e: Exploit Code Maturity (E)
+            rl: Remediation Level (RL)
+            rc: Report Confidence (RC)
 
-        Environmental metrics:
-        :param cr: Confidentiality Requirement (CR)
-        :param ir: Integrity Requirement (IR)
-        :param ar: Availability Requirement (AR)
-        :param mav: Modified Attack Vector (MAV)
-        :param mac: Modified Attack Complexity (MAC)
-        :param mpr: Modified Privileges Required (MPR)
-        :param mui: Modified User Interaction (MUI)
-        :param ms: Modified Scope (MS)
-        :param mc: Modified Confidentiality (MC)
-        :param mi: Modified Integrity (MI)
-        :param ma: Modified Availability (MA)
+            //Environmental metrics:
+            cr: Confidentiality Requirement (CR)
+            ir: Integrity Requirement (IR)
+            ar: Availability Requirement (AR)
+            mav: Modified Attack Vector (MAV)
+            mac: Modified Attack Complexity (MAC)
+            mpr: Modified Privileges Required (MPR)
+            mui: Modified User Interaction (MUI)
+            ms: Modified Scope (MS)
+            mc: Modified Confidentiality (MC)
+            mi: Modified Integrity (MI)
+            ma: Modified Availability (MA)
 
-        :param verbose: Defaults to False. A boolean flag to signal whether additional statements should be displayed.
+            verbose: Defaults to False. A boolean flag to signal whether additional statements should be displayed.
+
+        Returns:
+            A NvdCollector instance with the default/specified dates adjusted to valid ranges. The api_key will be
+              stored for later use when calling the API.
+
+        Raises:
+            ValueError: An invalid metric modifier was used during assignment.
         """
         self.av: str = ""
         self.ac: str = ""
@@ -202,6 +212,17 @@ class Cvss31:
 
     @classmethod
     def from_cve(cls, cve: nvd_classes.CVE):
+        """Construct a Cvss31 instance using values obtained from a CVE record.
+
+        Args:
+            cve: A single CVE record.
+
+        Returns:
+            An instance of the cls Class using values obtained from a CVE object.
+
+        Raises:
+            ValueError: An invalid metric modifier was attempted during assignment.
+        """
         try:
             return cls(
                 av=cve.v31attackVector,
@@ -213,12 +234,16 @@ class Cvss31:
                 i=cve.v31integrityImpact,
                 a=cve.v31availabilityImpact,
             )
-        except ValueError:
+
+        # An AttributeError caught here indicates no CVSS31 data, so a default Cvss31 initialization with unknown
+        # values ("X") would have raised a ValueError during assignment.
+        except (ValueError, AttributeError):
+
             print(
                 "Caught ValueError. Error while initializing Cvss31 values from CVE object."
             )
             print()  # print blank line
-            raise
+            raise ValueError
 
     def __repr__(self) -> str:
         """Returns the textual representation of the ec3 CVSS object. This is the full vector format."""
@@ -267,12 +292,18 @@ class Cvss31:
         return base_vector + temporal_vector + environmental_vector
 
     def set_av(self, av: str) -> None:
-        """
-        CVSS 3.1 Attack Vector (AV)
+        """Set CVSS 3.1 Attack Vector (AV).
+
         Valid values: Network (N), Adjacent (A), Local (L), Physical (P)
 
-        :param av: String representing the desired value for the Attack Vector exploitability metric
-        :return: None.
+        Args:
+            av: String representing the desired value for the Attack Vector exploitability metric.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: A missing or invalid value was attempted to be set for this metric.
         """
 
         if av is None:
@@ -293,12 +324,18 @@ class Cvss31:
         return None
 
     def set_ac(self, ac: str) -> None:
-        """
-        CVSS 3.1 Attack Complexity (AC)
+        """Set CVSS 3.1 Attack Complexity (AC).
+
         Valid values: Low (L), High (H)
 
-        :param ac: String representing the desired value for the Attack Complexity exploitability metric
-        :return: None.
+        Args:
+            ac: String representing the desired value for the Attack Complexity exploitability metric.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: A missing or invalid value was attempted to be set for this metric.
         """
 
         if ac is None:
@@ -319,12 +356,18 @@ class Cvss31:
         return None
 
     def set_pr(self, pr: str) -> None:
-        """
-        CVSS 3.1 Privileges Required (PR)
+        """Set CVSS 3.1 Privileges Required (PR).
+
         Valid values: None (N), Low (L), High (H)
 
-        :param pr: String representing the desired value for the Privileges Required exploitability metric
-        :return: None.
+        Args:
+            pr: String representing the desired value for the Privileges Required exploitability metric.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: A missing or invalid value was attempted to be set for this metric.
         """
 
         if pr is None:
@@ -345,12 +388,18 @@ class Cvss31:
         return None
 
     def set_ui(self, ui: str) -> None:
-        """
-        CVSS 3.1 User Interaction (UI)
+        """Set CVSS 3.1 User Interaction (UI).
+
         Valid values: None (N), Required (R)
 
-        :param ui: String representing the desired value for the User Interaction exploitability metric
-        :return: None.
+        Args:
+            ui: String representing the desired value for the User Interaction exploitability metric.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: A missing or invalid value was attempted to be set for this metric.
         """
 
         if ui is None:
@@ -371,12 +420,18 @@ class Cvss31:
         return None
 
     def set_s(self, s: str) -> None:
-        """
-        CVSS 3.1 Scope (S)
+        """Set CVSS 3.1 Scope (S).
+
         Valid values: Unchanged (U), Changed (C)
 
-        :param s: String representing the desired value for the Scope exploitability metric
-        :return: None.
+        Args:
+            s: String representing the desired value for the Scope exploitability metric.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: A missing or invalid value was attempted to be set for this metric.
         """
 
         if s is None:
@@ -395,12 +450,18 @@ class Cvss31:
         return None
 
     def set_c(self, c: str) -> None:
-        """
-        CVSS 3.1 Confidentiality (C)
+        """Set CVSS 3.1 Confidentiality (C).
+
         Valid values: High (H), Low (L), None (N)
 
-        :param c: String representing the desired value for the Confidentiality impact metric
-        :return: None.
+        Args:
+            c: String representing the desired value for the Confidentiality impact metric.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: A missing or invalid value was attempted to be set for this metric.
         """
 
         if c is None:
@@ -419,12 +480,18 @@ class Cvss31:
         return None
 
     def set_i(self, i: str) -> None:
-        """
-        CVSS 3.1 Integrity (I)
+        """Set CVSS 3.1 Integrity (I).
+
         Valid values: High (H), Low (L), None (N)
 
-        :param i: String representing the desired value for the Integrity impact metric
-        :return: None.
+        Args:
+            i: String representing the desired value for the Integrity impact metric.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: A missing or invalid value was attempted to be set for this metric.
         """
 
         if i is None:
@@ -441,12 +508,18 @@ class Cvss31:
         return None
 
     def set_a(self, a: str) -> None:
-        """
-        CVSS 3.1 Availability (A)
+        """Set CVSS 3.1 Availability (A).
+
         Valid values: High (H), Low (L), None (N)
 
-        :param a: String representing the desired value for the Availability impact metric
-        :return: None.
+        Args:
+            a: String representing the desired value for the Availability impact metric.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: A missing or invalid value was attempted to be set for this metric.
         """
 
         if a is None:
@@ -465,12 +538,18 @@ class Cvss31:
         return None
 
     def set_e(self, e: str) -> None:
-        """
-        CVSS 3.1 Exploit Code Maturity (E)
+        """Set CVSS 3.1 Exploit Code Maturity (E).
+
         Valid values: Not Defined (X), High (H), Functional (F), Proof-of-Concept (P), Unproven (U)
 
-        :param e: String representing the desired value for the Exploit Code Maturity temporal metric
-        :return: None.
+        Args:
+            e: String representing the desired value for the Exploit Code Maturity temporal metric.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: A missing or invalid value was attempted to be set for this metric.
         """
 
         if e is None:
@@ -491,12 +570,18 @@ class Cvss31:
         return None
 
     def set_rl(self, rl: str) -> None:
-        """
-        CVSS 3.1 Remediation Level (RL)
+        """Set CVSS 3.1 Remediation Level (RL).
+
         Valid values: Not Defined (X), Unavailable (U), Workaround (W), Temporary Fix (T), Official Fix (O)
 
-        :param rl: String representing the desired value for the Remediation Level temporal metric
-        :return: None.
+        Args:
+            rl: String representing the desired value for the Remediation Level temporal metric.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: A missing or invalid value was attempted to be set for this metric.
         """
 
         if rl is None:
@@ -517,12 +602,18 @@ class Cvss31:
         return None
 
     def set_rc(self, rc: str) -> None:
-        """
-        CVSS 3.1 Report Confidence (RC)
+        """Set CVSS 3.1 Report Confidence (RC).
+
         Valid values: Not Defined (X), Confirmed (C), Reasonable (R), Unknown (U)
 
-        :param rc: String representing the desired value for the Report Confidence temporal metric
-        :return: None.
+        Args:
+            rc: String representing the desired value for the Report Confidence temporal metric.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: A missing or invalid value was attempted to be set for this metric.
         """
 
         if rc is None:
@@ -543,12 +634,18 @@ class Cvss31:
         return None
 
     def set_cr(self, cr: str) -> None:
-        """
-        CVSS 3.1 Confidentiality Requirement (CR)
+        """Set CVSS 3.1 Confidentiality Requirement (CR).
+
         Valid values: Not Defined (X), High (H), Medium (M), Low (L)
 
-        :param cr: String representing the desired value for the Confidentiality Requirement environmental metric
-        :return: None.
+        Args:
+            cr: String representing the desired value for the Confidentiality Requirement environmental metric.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: A missing or invalid value was attempted to be set for this metric.
         """
 
         if cr is None:
@@ -569,12 +666,18 @@ class Cvss31:
         return None
 
     def set_ir(self, ir: str) -> None:
-        """
-        CVSS 3.1 Integrity Requirement (IR)
+        """Set CVSS 3.1 Integrity Requirement (IR).
+
         Valid values: Not Defined (X), High (H), Medium (M), Low (L)
 
-        :param ir: String representing the desired value for the Integrity Requirement environmental metric
-        :return: None.
+        Args:
+            ir: String representing the desired value for the Integrity Requirement environmental metric.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: A missing or invalid value was attempted to be set for this metric.
         """
 
         if ir is None:
@@ -595,12 +698,18 @@ class Cvss31:
         return None
 
     def set_ar(self, ar: str) -> None:
-        """
-        CVSS 3.1 Availability Requirement (AR)
+        """Set CVSS 3.1 Availability Requirement (AR).
+
         Valid values: Not Defined (X), High (H), Medium (M), Low (L)
 
-        :param ar: String representing the desired value for the Availability Requirement environmental metric
-        :return: None.
+        Args:
+            ar: String representing the desired value for the Availability Requirement environmental metric.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: A missing or invalid value was attempted to be set for this metric.
         """
 
         if ar is None:
@@ -621,12 +730,18 @@ class Cvss31:
         return None
 
     def set_mav(self, mav: str) -> None:
-        """
-        CVSS 3.1 Modified Attack Vector (MAV)
+        """Set CVSS 3.1 Modified Attack Vector (MAV).
+
         Valid values: Not Defined (X), Network (N), Adjacent (A), Local (L), Physical (P)
 
-        :param mav: String representing the desired value for the Modified Attack Vector exploitability metric
-        :return: None.
+        Args:
+            mav: String representing the desired value for the Modified Attack Vector exploitability metric.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: A missing or invalid value was attempted to be set for this metric.
         """
 
         if mav is None:
@@ -647,12 +762,18 @@ class Cvss31:
         return None
 
     def set_mac(self, mac: str) -> None:
-        """
-        CVSS 3.1 Modified Attack Complexity (MAC)
+        """Set CVSS 3.1 Modified Attack Complexity (MAC).
+
         Valid values: Not Defined (X), Low (L), High (H)
 
-        :param mac: String representing the desired value for the Modified Attack Complexity environmental metric
-        :return: None.
+        Args:
+            mac: String representing the desired value for the Modified Attack Complexity environmental metric.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: A missing or invalid value was attempted to be set for this metric.
         """
 
         if mac is None:
@@ -673,12 +794,18 @@ class Cvss31:
         return None
 
     def set_mpr(self, mpr: str) -> None:
-        """
-        CVSS 3.1 Modified Privileges Required (MPR)
+        """Set CVSS 3.1 Modified Privileges Required (MPR).
+
         Valid values: Not Defined (X), None (N), Low (L), High (H)
 
-        :param mpr: String representing the desired value for the Modified Privileges Required environmental metric
-        :return: None.
+        Args:
+            mpr: String representing the desired value for the Modified Privileges Required environmental metric.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: A missing or invalid value was attempted to be set for this metric.
         """
 
         if mpr is None:
@@ -699,12 +826,18 @@ class Cvss31:
         return None
 
     def set_mui(self, mui: str) -> None:
-        """
-        CVSS 3.1 Modified User Interaction (MUI)
+        """Set CVSS 3.1 Modified User Interaction (MUI).
+
         Valid values: Not Defined (X), None (N), Required (R)
 
-        :param mui: String representing the desired value for the Modified User Interaction environmental metric
-        :return: None.
+        Args:
+            mui: String representing the desired value for the Modified User Interaction environmental metric.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: A missing or invalid value was attempted to be set for this metric.
         """
 
         if mui is None:
@@ -725,12 +858,18 @@ class Cvss31:
         return None
 
     def set_ms(self, ms: str) -> None:
-        """
-        CVSS 3.1 Modified Scope (MS)
+        """Set CVSS 3.1 Modified Scope (MS).
+
         Valid values: Not Defined (X), Unchanged (U), Changed (C)
 
-        :param ms: String representing the desired value for the Modified Scope environmental metric
-        :return: None.
+        Args:
+            ms: String representing the desired value for the Modified Scope environmental metric.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: A missing or invalid value was attempted to be set for this metric.
         """
 
         if ms is None:
@@ -751,12 +890,18 @@ class Cvss31:
         return None
 
     def set_mc(self, mc: str) -> None:
-        """
-        CVSS 3.1 Modified Confidentiality (MC)
+        """Set CVSS 3.1 Modified Confidentiality (MC).
+
         Valid values: Not Defined (X), High (H), Low (L), None (N)
 
-        :param mc: String representing the desired value for the Modified Confidentiality impact metric
-        :return: None.
+        Args:
+            mc: String representing the desired value for the Modified Confidentiality impact metric.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: A missing or invalid value was attempted to be set for this metric.
         """
 
         if mc is None:
@@ -777,12 +922,18 @@ class Cvss31:
         return None
 
     def set_mi(self, mi: str) -> None:
-        """
-        CVSS 3.1 Modified Integrity (MI)
+        """Set CVSS 3.1 Modified Integrity (MI).
+
         Valid values: Not Defined (X), High (H), Low (L), None (N)
 
-        :param mi: String representing the desired value for the Modified Integrity environmental metric
-        :return: None.
+        Args:
+            mi: String representing the desired value for the Modified Integrity environmental metric.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: A missing or invalid value was attempted to be set for this metric.
         """
 
         if mi is None:
@@ -803,12 +954,18 @@ class Cvss31:
         return None
 
     def set_ma(self, ma: str) -> None:
-        """
-        CVSS 3.1 Modified Availability (MA)
+        """Set CVSS 3.1 Modified Availability (MA).
+
         Valid values: Not Defined (X), High (H), Low (L), None (N)
 
-        :param ma: String representing the desired value for the Modified Availability environmental metric
-        :return: None.
+        Args:
+            ma: String representing the desired value for the Modified Availability environmental metric.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: A missing or invalid value was attempted to be set for this metric.
         """
 
         if ma is None:
@@ -829,11 +986,15 @@ class Cvss31:
         return None
 
     def base_valid(self) -> bool:
-        """Returns True if the mandatory values for this CVSS are all present and have valid values.
+        """Determine whether the mandatory values for this CVSS are all present and have valid values.
+
         https://www.first.org/cvss/v3.1/specification-document Table 15 denotes the following as mandatory:
 
         Attack Vector (AV), Attack Complexity (AC), Privileges Required (PR), User Interaction (UI), Scope (S),
         Confidentiality (C), Integrity (I), Availability (A)
+
+        Returns:
+            True if all 8 base metrics are present and have valid values, or False otherwise.
         """
 
         # Use the validation within the set_* functions to determine whether each value is allowed.
@@ -851,14 +1012,19 @@ class Cvss31:
             return False
 
     def get_base_score(self) -> float:
-        """
-        If the base values are valid, calculate the base metrics based on the equations found at:
-        https://www.first.org/cvss/v3.1/specification-document#7-1-Base-Metrics-Equations
+        """Calculate the CVSS 3.1 base score.
 
-        Uses values obtained from:
-        https://www.first.org/cvss/v3.1/specification-document#7-4-Metric-Values
+        If the base metric values are valid, calculate the base score according to the equations found at:
+            https://www.first.org/cvss/v3.1/specification-document#7-1-Base-Metrics-Equations
 
-        :return float: The base score for the current CVSS class fields.
+        This calculation uses values obtained from:
+            https://www.first.org/cvss/v3.1/specification-document#7-4-Metric-Values
+
+        Returns:
+            The base score for the current CVSS class.
+
+        Raises:
+            ValueError: An invalid value was found among the base metrics.
         """
 
         # if self.base_valid(), then Scope (self.s) was set to "U" or "C" for the checks below
@@ -900,14 +1066,19 @@ class Cvss31:
         return base_score
 
     def get_temporal_score(self) -> float:
-        """
-        Calculate the environmental metrics based on the equations found at:
+        """Calculate the CVSS 3.1 temporal score.
+
+        Calculate the temporal score according to the equations found at:
         https://www.first.org/cvss/v3.1/specification-document#7-2-Temporal-Metrics-Equations
 
         Uses values obtained from:
         https://www.first.org/cvss/v3.1/specification-document#7-4-Metric-Values
 
-        :return float: The temporal score for the current CVSS class fields.
+        Returns:
+            The temporal score for the current CVSS class.
+
+        Raises:
+            ValueError: An invalid value was found among the base metrics.
         """
 
         # if self.base_valid(), then Scope (self.s) was set to "U" or "C" for the checks below
@@ -926,14 +1097,19 @@ class Cvss31:
         return temporal_score
 
     def get_environmental_score(self) -> float:
-        """
-        Calculate the environmental metrics based on the equations found at:
+        """Calculate the CVSS 3.1 environmental score.
+
+        Calculate the environmental score according to the equations found at:
         https://www.first.org/cvss/v3.1/specification-document#7-3-Environmental-Metrics-Equations
 
         Uses values obtained from:
         https://www.first.org/cvss/v3.1/specification-document#7-4-Metric-Values
 
-        :return float: The environmental score for the current CVSS class fields.
+        Returns:
+            The environmental score for the current CVSS class.
+
+        Raises:
+            ValueError: An invalid value was found among the base metrics.
         """
 
         # if self.base_valid(), then Scope (self.s) was set to "U" or "C" for the checks below
@@ -1016,27 +1192,33 @@ class Cvss31:
 
     @staticmethod
     def __get_modified_or_base(modified: str, base: str) -> str:
-        """
-        Utility function to quickly determine which value to use (modified/base).
+        """Determine which value to use during CVSS scoring lookups based on whether the modified metric value was set.
+
         https://www.first.org/cvss/v3.1/specification-document#4-2-Modified-Base-Metrics indicates to use the associated
         base metric when "Not Defined".
 
-        :param modified: The shorthand string value from the modified parameter
-        :param base: The shorthand string value from the base parameter
-        :return: The shorthand value from the base parameter if modified value is "Not Defined" ("X")
+        Args:
+            modified: The shorthand string value from the modified parameter.
+            base: The shorthand string value from the base parameter.
+
+        Returns:
+            The shorthand value from the base parameter if modified value is "Not Defined" ("X")
                 Otherwise return the modified value.
         """
         return modified if modified != "X" else base
 
     @staticmethod
     def __roundup(value: float) -> float:
-        """
-        Returns a rounded up value with 1 decimal precision. See proposed algorithm found at :
-        https://www.first.org/cvss/v3.1/specification-document#Appendix-A---Floating-Point-Rounding
-        Intended to remove implementation specific rounding errors.
+        """Obtain a float value rounded up with 1 decimal precision.
 
-        :param value: Float value to be rounded up.
-        :return: A float rounded up to the nearest .1 value.
+        Intended to remove implementation specific rounding errors. See proposed algorithm found at :
+        https://www.first.org/cvss/v3.1/specification-document#Appendix-A---Floating-Point-Rounding
+
+        Args:
+            value: Float value to be rounded up.
+
+        Returns:
+            A float rounded up to the nearest .1 value.
         """
         int_input = round(value * 100000)
         if (int_input % 10000) == 0:

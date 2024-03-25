@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ec3"
-version = "0.3.0"
+version = "0.7.0"
 description = "Environmental CWE CVSS Calculator (ec3)"
 authors = [
     "drothenberg <drothenberg@mitre.org>",
@@ -13,15 +13,14 @@ license = "Apache"
 [tool.poetry.dependencies]
 python = "^3.10"
 nvdlib = "^0.7.6"
+ruff = "^0.3.3"
 
 [tool.poetry.group.dev.dependencies]
 bandit = "1.7.0"
-black = "^22.3.0"
 bumpver = "^2022.1119"
 pytest = "^7.1.2"
 pytest-cov = "2.11.1"
 safety = "1.10.3"
-isort = "^5.12.0"
 mypy = "^1.2.0"
 types-requests = "^2.31.0.20240125"
 types-mock = "^5.1.0.20240106"
@@ -29,10 +28,6 @@ mock = "^5.1.0"
 
 [tool.poetry.scripts]
 ec3-cli = "ec3.cli:main"
-
-[tool.black]
-line-length = 88
-target-version = ['py310']
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -54,6 +49,6 @@ tag = true
     'version = "{pep440_version}"',
 ]
 
-[tool.isort]
-profile = "black"
-skip_gitignore = true
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "W", "I"]

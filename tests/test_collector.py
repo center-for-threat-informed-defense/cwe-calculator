@@ -12,7 +12,7 @@ import ec3.collector
 def example_cve_data() -> nvd_classes.CVE:
 
     # Using API return of Heartbleed CVE as an example, some unrelated fields have been selectively removed.
-    test_data = nvd_classes.__convert(
+    test_data_reduced = nvd_classes.__convert(
         product="cve",
         CVEID={
             "id": "CVE-2014-0160",
@@ -20,19 +20,6 @@ def example_cve_data() -> nvd_classes.CVE:
             "published": "2014-04-07T22:55:03.893",
             "lastModified": "2023-11-07T02:18:10.590",
             "vulnStatus": "Modified",
-            "evaluatorImpact": "CVSS V2 scoring evaluates the impact of the vulnerability on the host where the "
-            "vulnerability is located. When evaluating the impact of this vulnerability to your "
-            "organization, take into account the nature of the data that is being protected and act "
-            "according to your organization’s risk acceptance. While CVE-2014-0160 does not allow "
-            "unrestricted access to memory on the targeted host, a successful exploit does leak "
-            "information from memory locations which have the potential to contain particularly "
-            "sensitive information, e.g., cryptographic keys and passwords.  Theft of this "
-            "information could enable other attacks on the information system, the impact of which "
-            "would depend on the sensitivity of the data and functions of that system.",
-            "cisaExploitAdd": "2022-05-04",
-            "cisaActionDue": "2022-05-25",
-            "cisaRequiredAction": "Apply updates per vendor instructions.",
-            "cisaVulnerabilityName": "OpenSSL Information Disclosure Vulnerability",
             "descriptions": [
                 {
                     "lang": "en",
@@ -93,7 +80,7 @@ def example_cve_data() -> nvd_classes.CVE:
         },
     )
 
-    return test_data
+    return test_data_reduced
 
 
 @pytest.fixture
@@ -115,9 +102,8 @@ def test_search_cve(mock_search_cve, example_cve_data):
 def test_search_cve_scrolling(mock_search_cve, example_cve_data):
     mock_search_cve.return_value = [example_cve_data]
     test_collector = ec3.collector.NvdCollector(
-        target_range_start=datetime.now()
-        - timedelta(days=ec3.collector.max_date_range + 1),
-        target_range_end=datetime.now(),
+        start_date=datetime.now() - timedelta(days=ec3.collector.max_date_range + 1),
+        end_date=datetime.now(),
         verbose=True,
     )
 
@@ -130,24 +116,24 @@ def test_adjust_valid_dates_bounds():
 
     # Test adjust_valid_dates with bounds beyond the expected range.
     test_collector = ec3.collector.NvdCollector(
-        target_range_start=datetime(1995, 10, 10, 0, 0, 0),
-        target_range_end=datetime(2200, 11, 11, 0, 0, 0),
+        start_date=datetime(1995, 10, 10, 0, 0, 0),
+        end_date=datetime(2200, 11, 11, 0, 0, 0),
         verbose=True,
     )
-    assert test_collector.target_range_start == datetime(2020, 1, 1, 0, 0, 0)
-    assert test_collector.target_range_end <= datetime.now()
+    assert test_collector.start_date == datetime(2020, 1, 1, 0, 0, 0)
+    assert test_collector.end_date <= datetime.now()
 
 
 def test_adjust_valid_dates_swap():
 
     # Test adjust_valid_dates with bounds swapped and beyond expected ranges.
     test_collector = ec3.collector.NvdCollector(
-        target_range_start=datetime(2200, 11, 11, 0, 0, 0),
-        target_range_end=datetime(1995, 10, 10, 0, 0, 0),
+        start_date=datetime(2200, 11, 11, 0, 0, 0),
+        end_date=datetime(1995, 10, 10, 0, 0, 0),
         verbose=True,
     )
-    assert test_collector.target_range_start <= datetime.now()
-    assert test_collector.target_range_end <= datetime.now()
+    assert test_collector.start_date <= datetime.now()
+    assert test_collector.end_date <= datetime.now()
 
 
 def test_save_data_to_file_error(example_collector, example_cve_data):

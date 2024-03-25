@@ -1,8 +1,13 @@
-"""
-Utility class to parse, modify, and analyze NVD vulnerability data.
+"""Utility class to parse, modify, and analyze NVD vulnerability data.
+
 NVD vulnerability data is parsed to extract CWE/CVSS31 fields for later statistical analysis.
 Temporal and environmental CVSS metrics may be specified to influence calculations.
 Results may be obtained for any number of CWE identifiers using the same source data.
+
+Typical usage example:
+    ec3_calc = ec3.calculator.Cvss31Calculator()
+    example_results = ec3_calc.calculate_results(125)
+    ec3_calc.output_results(example_results)
 
 Copyright (c) 2024 The MITRE Corporation. All rights reserved.
 """
@@ -20,9 +25,7 @@ from ec3.cvss import Cvss31
 
 
 class Cvss31Calculator:
-    """
-    Wrapper class to obtain vulnerability data, and handle statistical calculations.
-    """
+    """Calculate projected CVSS v3.1 scores based on loaded vulnerability data, for any given CWE ID."""
 
     def __init__(
         self,
@@ -30,25 +33,24 @@ class Cvss31Calculator:
         normalization_file_str: str = "",
         verbose: bool = False,
     ) -> None:
-        """
-        Initialize a Cvss31Calculator class instance using the provided parameters.
+        """Initialize a Cvss31Calculator class instance using the provided parameters.
 
-        :param data_file_str: A string representing the default location to load vulnerability data from.
-        :param normalization_file_str: A string representing the normalization CSV file location to use when
-        calculating normalized results.
-        :param verbose: A boolean flag to signal whether additional statements should be displayed.
+        Args:
+            data_file_str: A string representing the default location to load vulnerability data from.
+            normalization_file_str: A string representing the normalization CSV file location to use when calculating
+              normalized results.
+            verbose: A boolean flag to set the appropriate logging level.
+
+        Returns:
+            A Cvss31Calculator instance with the default/specified data file already loaded into memory. All CVSS
+              metric modifiers are initialized to "Unknown"/"X". The internal CWE table has been constructed from the
+              call to load_data_file.
         """
 
         self.verbose: bool = verbose
 
         # This will hold a list of nvdlib.classes.CVE objects loaded from a collector or file.
         self.raw_cve_data: list[nvd_classes.CVE] = []
-
-        # Set self.raw_cve_data to default data file contents.
-        if data_file_str:
-            self.load_data_file(data_file_str)
-        else:
-            self.load_data_file(data_default_file)
 
         # Save the path to the normalization file to use when calculate_results is called with the normalize flag.
         self.normalization_file_str = normalization_file_str
@@ -74,17 +76,27 @@ class Cvss31Calculator:
         self.modified_integrity: str = "X"
         self.modified_availability: str = "X"
 
+        # Set self.raw_cve_data to default data file contents.
+        if data_file_str:
+            self.load_data_file(data_file_str)
+        else:
+            self.load_data_file(data_default_file)
+
         if self.verbose:
             print(f"Initialized Cvss31Calculator.")
             print()  # print blank line
 
     @staticmethod
     def __cwe_id_valid(cwe_id: int | str | None) -> bool:
-        """
-        Utility function that provides a quick sanity check for the CWE ID value, whether it is an integer or string.
+        """Provide a quick sanity check for the provided CWE ID value.
 
-        :param cwe_id: CWE identifier to evaluate as a potentially valid ID. Value may be an integer, string, or None.
-        :return: True if cwe_id is representable as an integer and is greater than 0, False otherwise.
+        A CWE ID should be a positive integer greater than 0. Note: not all IDs are used by CWE.
+
+        Args:
+            cwe_id: CWE identifier to evaluate as a potentially valid ID. Value may be an integer, string, or None.
+
+        Returns:
+            True if cwe_id is representable as an integer and is greater than 0, False otherwise.
         """
 
         try:
@@ -97,11 +109,13 @@ class Cvss31Calculator:
 
     @staticmethod
     def __get_cwe_from_cve(cve: nvd_classes.CVE) -> list[int]:
-        """
-        Get all valid CWEs associated with the single nvdlib CVE object
+        """Get all valid CWEs associated with the single nvdlib CVE object
 
-        :param cve: A single CVE record from the list of CVEs loaded from the NVD data
-        :return A list containing the numerical ids of valid CWEs parsed from this CVE.
+        Args:
+            cve: A single CVE record from the list of CVEs loaded from the NVD data
+
+        Returns:
+            A list containing the numerical ids of valid CWEs parsed from this CVE.
         """
 
         cwes: list[int] = []
@@ -148,13 +162,16 @@ class Cvss31Calculator:
 
     @staticmethod
     def __restricted_load(file_str: str | None) -> list[nvd_classes.CVE]:
-        """
-        Helper function to restrict the loaded class type. Attempts to load a list of nvd_classes.CVE. This should
-        prevent unsafe modules from being arbitrarily loaded.
+        """Restrict the loaded class type.
 
-        :param file_str: A string representing the data file path to load.
-        :return: A list of nvdlib.classes.CVE objects if the pickle file is available and accessible. Returns an
-        empty list otherwise.
+        Attempts to load a list of nvd_classes.CVE. This should prevent unsafe modules from being arbitrarily loaded.
+
+        Args:
+            file_str: A string representing the data file path to load.
+
+        Returns:
+            A list of nvdlib.classes.CVE objects if the pickle file is available and accessible. Returns an empty
+              list otherwise.
         """
 
         return (
@@ -164,13 +181,17 @@ class Cvss31Calculator:
         )
 
     def load_data_file(self, data_file_str: str | None = None) -> None:
-        """
-        Loads a previously saved pickle file containing NVD vulnerability data into a nvdlib.classes.CVE list that the
-        code can handle. If unable to load data from the specified or default data file, returns an empty list.
-        Calling this function will potentially replace previously loaded data in memory.
+        """Loads a previously saved pickle file containing NVD vulnerability data.
 
-        :param data_file_str: String containing the path to a pickle file containing nvdlib.classes.CVE data.
-        :return None
+        Loads vulnerability data into a list containing nvdlib.classes.CVE objects. If unable to load data from the
+        specified or default data file, assigns the internal list to be empty. Calling this function will potentially
+        replace previously loaded data in memory.
+
+        Args:
+            data_file_str: String containing the path to a pickle file containing nvdlib.classes.CVE data.
+
+        Returns:
+            None
         """
 
         if self.verbose:
@@ -186,7 +207,10 @@ class Cvss31Calculator:
             data_file_str = data_default_file
 
         try:
-            self.raw_cve_data = self.__restricted_load(file_str=data_file_str)
+            loaded_data: list[nvd_classes.CVE] = self.__restricted_load(
+                file_str=data_file_str
+            )
+            self.set_vulnerability_data(new_data=loaded_data)
         except FileNotFoundError:
             print("Caught FileNotFoundError. Input file not found.")
         except PermissionError:
@@ -197,17 +221,18 @@ class Cvss31Calculator:
         return None
 
     def normalize_cwe(self, cwe_id: int = 0) -> int | None:
-        """
-        Loads the normalization data CSV file and returns the first valid corresponding normalization CWE identifier.
+        """Load the normalization data CSV file and return the first valid corresponding normalization CWE identifier.
 
         The normalization file should only have one suggestion per CWE ID in the left column.
         The file may map an identifier to itself or "Other". Both of these cases are expected to set the normalization
         CWE ID to None. If unable to load data from a file, file permissions are encountered, or no lookup value is
         found, set the normalization CWE ID to None.
 
-        :param cwe_id: A CWE identifier used for the lookup in the left column of the normalization CSV file.
-        :return A CWE identifier of the normalized value to use in place of the original cwe_id, or None if no new ID
-        was found.
+        Args:
+            cwe_id: A CWE identifier used for the lookup in the left column of the normalization CSV file.
+
+        Returns:
+            A CWE identifier of the normalized value to use in place of cwe_id, or None if no new ID was found.
         """
 
         try:
@@ -247,12 +272,20 @@ class Cvss31Calculator:
         return None
 
     def set_vulnerability_data(self, new_data: list[nvd_classes.CVE]) -> None:
-        """
-        Utility function to  evaluate whether the input data is a list of nvdlib.classes.CVE objects. If so, load this
-        new_data into the class instance. Otherwise, raise TypeError.
+        """Validate then assign a new source of vulnerability data from memory.
 
-        :param new_data: A list of new vulnerability records to load into this class instance.
-        :return: None
+        Evaluate whether the input data is a list of nvdlib.classes.CVE objects. If so, load this
+        new_data into the class instance. Otherwise, raise TypeError. Additionally, update the internal CWE table based
+        on new data.
+
+        Args:
+            new_data: A list of new vulnerability records to load into this class instance.
+
+        Returns:
+            None
+
+        Raises:
+            TypeError: The new_data provided was not a list of CVE objects.
         """
 
         if not isinstance(new_data, list) or not any(
@@ -286,25 +319,29 @@ class Cvss31Calculator:
         mi: str = "X",
         ma: str = "X",
     ) -> None:
-        """
-        Utility function to set the individual temporal and environmental re-scoring metrics. Validation occurs during
-        the actual modification of the Cvss31 object.
+        """Set the individual temporal and environmental re-scoring metrics.
 
-        :param e: Value representing temporal Exploit Code Maturity (E) modification
-        :param rl: Value representing temporal Remediation Level (RL) modification
-        :param rc: Value representing temporal Report Confidence (RC) modification
-        :param cr: Value representing environmental Confidentiality Requirement (CR) modification
-        :param ir: Value representing environmental Integrity Requirement (IR) modification
-        :param ar: Value representing environmental Availability Requirement (AR) modification
-        :param mav: Value representing environmental Modified Attack Vector (MAV) modification
-        :param mac: Value representing environmental Modified Attack Complexity (MAC) modification
-        :param mpr: Value representing environmental Modified Privileges Required (MPR) modification
-        :param mui: Value representing environmental Modified User Interaction (MUI) modification
-        :param ms: Value representing environmental Modified Scope (MS) modification
-        :param mc: Value representing environmental Modified Confidentiality (MC) modification
-        :param mi: Value representing environmental Modified Integrity (MI) modification
-        :param ma: Value representing environmental Modified Availability (MA) modification
-        :return: None
+        Validation occurs during the actual modification of the Cvss31 object.  Additionally, update the internal CWE
+        table based on new scoring modifiers.
+
+        Args:
+            e: Value representing temporal Exploit Code Maturity (E) modification
+            rl: Value representing temporal Remediation Level (RL) modification
+            rc: Value representing temporal Report Confidence (RC) modification
+            cr: Value representing environmental Confidentiality Requirement (CR) modification
+            ir: Value representing environmental Integrity Requirement (IR) modification
+            ar: Value representing environmental Availability Requirement (AR) modification
+            mav: Value representing environmental Modified Attack Vector (MAV) modification
+            mac: Value representing environmental Modified Attack Complexity (MAC) modification
+            mpr: Value representing environmental Modified Privileges Required (MPR) modification
+            mui: Value representing environmental Modified User Interaction (MUI) modification
+            ms: Value representing environmental Modified Scope (MS) modification
+            mc: Value representing environmental Modified Confidentiality (MC) modification
+            mi: Value representing environmental Modified Integrity (MI) modification
+            ma: Value representing environmental Modified Availability (MA) modification
+
+        Returns:
+            None
         """
 
         self.exploit_code_maturity = e
@@ -329,12 +366,16 @@ class Cvss31Calculator:
         return None
 
     def build_cwe_table(self) -> None:
-        """
-        Utility function to parse through the loaded vulnerability data, and create a lookup dict for each CWE
-        identifier encountered. This data is stored within the class for later use during final calculations. Saves the
-        associated CVE/CVSS data (applying temporal/environmental modifications) within their respective CWE lookup bin.
+        """Parse through the loaded vulnerability data, and create a lookup dict for each CWE identifier encountered.
 
-        :return: None
+        This data is stored within the class for later use during final calculations. Saves the associated CVE/CVSS
+        data (applying temporal/environmental modifications) within their respective CWE lookup bin.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError: An invalid flag was attempted to be used.
         """
 
         # Reinitialize the cwe_data dict. Populate the CWE dictionary and cve count
@@ -394,20 +435,24 @@ class Cvss31Calculator:
         return None
 
     def calculate_results(self, cwe_id: int = 0, normalize: bool = False) -> dict:
-        """
-        Utility function to conduct statistical analysis against source data. Can be called multiple times against
-        different IDs and will use the same data until new data is loaded from a file or the ec3.collector.
+        """Conduct statistical analysis against source data.
+
+        Can be called multiple times against different IDs and will use the same data until new data is loaded from a
+        file or the ec3.collector.
 
         If normalization was requested, then we will attempt to find a replacement recommended CWE ID to use from
         the class' set normalization file string. Normalization is attempting to use a CWE ID higher in the relationship
         tree that might be more commonly used during mapping. Note that not all CWE IDs have a recommended
         normalization ID to use as a replacement.
 
-        :param cwe_id: A required integer value for the CWE ID to collect data on.
-        :param normalize: A boolean value to determine whether a normalized CWE ID is used in lieu of the provided ID.
-        :return The results dict includes the projected CVSS score (accounting for temporal and environmental
-        modifications), the CWE ID used, min/max/mean base score CVSS values, count (of vulnerabilities mapped to the
-        desired CWE ID), and the list of related CVE records.
+        Args:
+            cwe_id: A required integer value for the CWE ID to collect data on.
+            normalize: A boolean value to determine whether a normalized CWE ID is used in lieu of the provided ID.
+
+        Returns:
+            The results dict includes the projected CVSS score (accounting for temporal and environmental
+              modifications), the CWE ID used, min/max/mean base score CVSS values, count (of vulnerabilities mapped to
+              the desired CWE ID), and the list of related CVE records.
         """
 
         # Attempt to load the normalization CSV file, and update the cwe_id param to the normalized value if not None.
@@ -473,13 +518,17 @@ class Cvss31Calculator:
         return empty_results
 
     def output_results(self, ec3_results: dict = {}, cve_cols: int = 4) -> None:
-        """
-        Utility function to print a previously returned results dictionary. If verbose, include additional fields beyond
-        the "Projected CVSS". Validates the expected type for each field before rendering.
+        """Print a previously returned results dictionary.
 
-        :param ec3_results: A required dictionary of values returned from Cvss31Calculator.calculate_results().
-        :param cve_cols: An optional integer to set how many CVE records appear per line during output.
-        :return None
+        If verbose, include additional fields beyond the "Projected CVSS". Validates the expected type for each field
+        before rendering.
+
+        Args:
+            ec3_results: A required dictionary of values returned from Cvss31Calculator.calculate_results().
+            cve_cols: An optional integer to set how many CVE records appear per line during output.
+
+        Returns:
+            None
         """
 
         if self.__results_valid(ec3_results) and self.__cwe_id_valid(
@@ -532,14 +581,15 @@ class Cvss31Calculator:
     def __dict_key_matches_type(
         test_dict: dict | None, test_key: str, test_type: type
     ) -> bool:
-        """
-        Utility function that confirms a dictionary passed in has the specified key present, and that key is of the
-        expected Type.
+        """Confirm that a dictionary passed in has the specified key present, and that key is of the expected Type.
 
-        :param test_dict: Provided dictionary to be queried
-        :param test_key: The string key to look up within test_dict.
-        :param test_type: The expected type of test_dict[test_key].
-        :return: True if test_dict[test_key] is an instance of test_type, False otherwise
+        Args:
+            test_dict: Provided dictionary to be queried
+            test_key: The string key to look up within test_dict.
+            test_type: The expected type of test_dict[test_key].
+
+        Returns:
+            True if test_dict[test_key] is an instance of test_type, False otherwise
         """
 
         # Ensure test_dict is not None/empty and contains the test_key
@@ -552,12 +602,13 @@ class Cvss31Calculator:
 
     @staticmethod
     def __results_valid(ec3_results: dict | None) -> bool:
-        """
-        Utility function that confirms a results object passed in has all expected fields and conforms to the expected
-         data types.
+        """Confirm that a results object passed in has all expected fields and conforms to the expected data types.
 
-        :param ec3_results: Provided results dictionary to be evaluated for completeness and the correct structure
-        :return: True if ec3_results contains all fields in the expected data types, False otherwise.
+        Args:
+            ec3_results: Provided results dictionary to be evaluated for completeness and the correct structure
+
+        Returns:
+            True if ec3_results contains all fields in the expected data types, False otherwise.
         """
         results_invalid: bool = False
         if ec3_results:
@@ -599,9 +650,7 @@ class Cvss31Calculator:
 
 
 class RestrictedUnpickler(pickle.Unpickler):
-    """
-    Helper class to restrict the unpickler to just nvdlib.classes.CVE objects
-    """
+    """Restrict the unpickler to just nvdlib.classes.CVE objects"""
 
     def find_class(self, module, name) -> nvd_classes.CVE:
         """
@@ -609,11 +658,15 @@ class RestrictedUnpickler(pickle.Unpickler):
         Only permit nvdlib.classes.CVE to be loaded by the unpickler. For any other type raise an exception to stop
         a potentially malicious module.
 
-        :param module: The expected module to load from the unpickler. Must be "nvdlib.classes" during this
-        restricted loading operation.
-        :param name: The expected class within the module from the unpickler. Must be "CVE" during this restricted
-        loading operation
-        :return nvdlib.classes.CVE class type
+        Args:
+            module: The expected module to load from the unpickler. Must be "nvdlib.classes" during this restricted
+            loading operation.
+            name: The expected class within the module from the unpickler. Must be "CVE" during this restricted
+            loading operation
+        Returns:
+            The nvdlib.classes.CVE class type
+        Raises:
+            pickle.UnpicklingError: An unexpected class was attempted to be loaded.
         """
 
         if module == "nvdlib.classes" and name in {"CVE"}:

@@ -238,7 +238,6 @@ class Cvss31:
         # An AttributeError caught here indicates no CVSS31 data, so a default Cvss31 initialization with unknown
         # values ("X") would have raised a ValueError during assignment.
         except (ValueError, AttributeError):
-
             print(
                 "Caught ValueError. Error while initializing Cvss31 values from CVE object."
             )
@@ -558,7 +557,14 @@ class Cvss31:
         match e.upper():
             case "X" | "H" | "F" | "P" | "U":
                 self.e = e
-            case "HIGH" | "FUNCTIONAL" | "PROOF OF CONCEPT" | "PROOF-OF-CONCEPT" | "PROOF_OF_CONCEPT" | "UNPROVEN":
+            case (
+                "HIGH"
+                | "FUNCTIONAL"
+                | "PROOF OF CONCEPT"
+                | "PROOF-OF-CONCEPT"
+                | "PROOF_OF_CONCEPT"
+                | "UNPROVEN"
+            ):
                 self.e = e[0]
             case "NOT DEFINED" | "NOT_DEFINED":
                 self.e = "X"
@@ -590,7 +596,14 @@ class Cvss31:
         match rl.upper():
             case "X" | "U" | "W" | "T" | "O":
                 self.rl = rl
-            case "UNAVAILABLE" | "WORKAROUND" | "TEMPORARY FIX" | "TEMPORARY_FIX" | "OFFICIAL FIX" | "OFFICIAL_FIX":
+            case (
+                "UNAVAILABLE"
+                | "WORKAROUND"
+                | "TEMPORARY FIX"
+                | "TEMPORARY_FIX"
+                | "OFFICIAL FIX"
+                | "OFFICIAL_FIX"
+            ):
                 self.rl = rl[0]
             case "NOT DEFINED" | "NOT_DEFINED":
                 self.rl = "X"

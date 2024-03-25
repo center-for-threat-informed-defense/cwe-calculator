@@ -51,4 +51,4 @@ tag = true
 
 [tool.ruff]
 line-length = 88
-select = ["E", "F", "W", "I"]
+lint.select = ["E", "F", "W", "I"]

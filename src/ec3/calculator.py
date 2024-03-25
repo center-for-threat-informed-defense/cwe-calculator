@@ -126,7 +126,6 @@ class Cvss31Calculator:
 
         # CVEs might have multiple CWE mappings and each mapping might contain space delimited CWEs.
         for cwe in cve.cwe:
-
             # Ignore valid mappings that are not found within CWE.
             if cwe.value in [
                 "NVD-CWE-noinfo",
@@ -144,7 +143,6 @@ class Cvss31Calculator:
             try:
                 if " " in cwe.value:
                     for x in cwe.value.split(" "):
-
                         # Ensure that we're not trying to parse the empty string
                         if not x:
                             continue
@@ -242,7 +240,6 @@ class Cvss31Calculator:
                 # Check each line, return on the first valid match. Otherwise, return None.
                 for lines in normalization_file:
                     if lines[0] == cwe_id.__str__():
-
                         # Try to cast the normalized value column as an integer and return
                         try:
                             if lines[1] != "Other" and lines[1] != cwe_id.__str__():
@@ -466,7 +463,6 @@ class Cvss31Calculator:
             score_values: list[list[float]] = []
             cve_ids: list[str] = []
             if self.cwe_data[cwe_id]:
-
                 for [cve_id, cvss_data] in self.cwe_data[cwe_id]:
                     scores = [
                         cvss_data.get_base_score(),
@@ -535,7 +531,6 @@ class Cvss31Calculator:
             ec3_results["CWE"]
         ):
             if self.verbose:
-
                 # If negative or bad value provided, set back to default of 4 columns per line.
                 if not isinstance(cve_cols, int) or cve_cols < 1:
                     cve_cols = 4

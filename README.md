@@ -74,8 +74,15 @@ Some examples of common commands would include:
 
 The CVSS Calculator uses the following methodology when providing potential CVSS scores:
 
-Pre-requisite: *The desired environmental and temporal CVSS v3.1 metrics have been
-provided*.
+Pre-requisites:
+
+- The desired environmental and temporal CVSS v3.1 metrics have been
+  provided.
+- A valid CWE Identifier has been provided.
+
+If normalization was requested, a simple lookup is performed to determine whether a
+higher-level CWE ID might be more applicable. This new value replaces the requested CWE
+Identifier.
 
 For each CVE Record that contains a CVSS v3.1 base score:
 
@@ -85,16 +92,17 @@ For each CVE Record that contains a CVSS v3.1 base score:
 When calculating the results for a specific CWE Identifier:
 
 - Provide the projected CVSS score from the environmental+temporal+base CVSS
-  calculation.
+  calculation (See 'CVSS Equations' in resource table below).
     - This is a statistical mean of all numeric CVSS scores.
 - Provide min/max/average/stdev from the base CVSS calculation.
-- Additionally list each CVE Record associated with the CWE Identifer
+- Additionally list each CVE Record associated with the CWE Identifer.
 
-| Resource                                                                        | Description                                                                      |
-|---------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
-| [NVD API Request](https://nvd.nist.gov/developers/request-an-api-key)           | The form for developers to request an API key.                                   |
-| [NVD API Rate Limits](https://nvd.nist.gov/developers/start-here#divRateLimits) | Description of the NVD API rate limits                                           |
-| [CWE-1003](https://cwe.mitre.org/data/definitions/1003.html)                    | CWE View 1003 ("Weaknesses for Simplified Mapping of Published Vulnerabilities") |
+| Resource                                                                                     | Description                                                                      |
+|----------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
+| [NVD API Request](https://nvd.nist.gov/developers/request-an-api-key)                        | The form for developers to request an API key.                                   |
+| [NVD API Rate Limits](https://nvd.nist.gov/developers/start-here#divRateLimits)              | Description of the NVD API rate limits                                           |
+| [CVSS Equations](https://www.first.org/cvss/v3.1/specification-document#CVSS-v3-1-Equations) | CVSS 3.1 Base/Temporal/Environmental Metrics Equations                           |
+| [CWE-1003](https://cwe.mitre.org/data/definitions/1003.html)                                 | CWE View 1003 ("Weaknesses for Simplified Mapping of Published Vulnerabilities") |
 
 ## Getting Involved
 

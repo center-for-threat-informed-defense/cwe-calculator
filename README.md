@@ -76,7 +76,7 @@ Some examples of common commands would include:
 
 **Running more advanced queries such as normalization or modifying metrics**
 
-`ec3-cli calculate 121 --normalize_file ./data/normalized.csv -v`
+`ec3-cli calculate 121 --normalize-file ./data/normalized.csv -v`
 
 `ec3-cli calculate 787 -e U -mpr H -v`
 

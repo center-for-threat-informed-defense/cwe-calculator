@@ -13,6 +13,7 @@ Copyright (c) 2024 The MITRE Corporation. All rights reserved.
 import logging
 import pickle
 from datetime import datetime, timedelta
+from typing import Generator
 
 import nvdlib  # type: ignore
 from nvdlib import classes as nvd_classes  # type: ignore
@@ -136,7 +137,6 @@ class NvdCollector:
         """
 
         cve_search: list[nvd_classes.CVE] = []
-
         for temp_range_start, temp_range_end in self.generate_time_ranges(
             self.start_date, self.end_date
         ):
@@ -155,7 +155,7 @@ class NvdCollector:
     @staticmethod
     def generate_time_ranges(
         start_date: datetime, end_date: datetime
-    ) -> list[datetime]:
+    ) -> Generator[list[datetime], None, None]:
         """Create datetime ranges within the API maximum limits for the desired bounds.
 
         The NVD 2.0 API can only handle a max date range of [max_date_range] days.

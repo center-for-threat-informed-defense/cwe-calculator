@@ -107,6 +107,13 @@ When calculating the results for a specific CWE Identifier:
 - Provide min/max/average/stdev from the base CVSS calculation.
 - Additionally list each CVE Record associated with the CWE Identifer.
 
+### Other Notes
+
+Setting environmental and temporal CVSS metrics are useful to better reflect the
+applicability of a vulnerability to a known environment. Please note that setting every
+environmental and temporal metric available overrides the CVSS base metrics and will
+result in a fixed CVSS score that ignores any base value.
+
 | Resource                                                                                     | Description                                                                      |
 |----------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
 | [NVD API Request](https://nvd.nist.gov/developers/request-an-api-key)                        | The form for developers to request an API key.                                   |

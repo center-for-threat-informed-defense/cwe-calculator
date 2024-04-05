@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ec3"
-version = "0.7.0"
+version = "1.0.0"
 description = "Environmental CWE CVSS Calculator (ec3)"
 authors = [
     "drothenberg <drothenberg@mitre.org>",

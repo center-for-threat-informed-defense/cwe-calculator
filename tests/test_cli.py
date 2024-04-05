@@ -19,27 +19,10 @@ def example_cve_data() -> nvd_classes.CVE:
             "published": "2014-04-07T22:55:03.893",
             "lastModified": "2023-11-07T02:18:10.590",
             "vulnStatus": "Modified",
-            "evaluatorImpact": "CVSS V2 scoring evaluates the impact of the vulnerability on the host where the "
-            "vulnerability is located. When evaluating the impact of this vulnerability to your "
-            "organization, take into account the nature of the data that is being protected and act "
-            "according to your organization’s risk acceptance. While CVE-2014-0160 does not allow "
-            "unrestricted access to memory on the targeted host, a successful exploit does leak "
-            "information from memory locations which have the potential to contain particularly "
-            "sensitive information, e.g., cryptographic keys and passwords.  Theft of this "
-            "information could enable other attacks on the information system, the impact of which "
-            "would depend on the sensitivity of the data and functions of that system.",
-            "cisaExploitAdd": "2022-05-04",
-            "cisaActionDue": "2022-05-25",
-            "cisaRequiredAction": "Apply updates per vendor instructions.",
-            "cisaVulnerabilityName": "OpenSSL Information Disclosure Vulnerability",
             "descriptions": [
                 {
                     "lang": "en",
-                    "value": "The (1) TLS and (2) DTLS implementations in OpenSSL 1.0.1 before 1.0.1g do not properly "
-                    "handle Heartbeat Extension packets, which allows remote attackers to obtain sensitive "
-                    "information from process memory via crafted packets that trigger a buffer over-read, as "
-                    "demonstrated by reading private keys, related to d1_both.c and t1_lib.c, aka the "
-                    "Heartbleed bug.",
+                    "value": "Test",
                 },
             ],
             "metrics": {
@@ -108,7 +91,7 @@ def example_cve_data() -> nvd_classes.CVE:
 
 @pytest.fixture
 def example_simple_args() -> list[str]:
-    simple_args = ["125"]
+    simple_args = ["calculate", "125"]
 
     return simple_args
 
@@ -116,6 +99,7 @@ def example_simple_args() -> list[str]:
 @pytest.fixture
 def example_normalized_modified_args() -> list[str]:
     normalized_modified_args = [
+        "calculate",
         "121",
         "--data-file",
         ".\\data\\nvd_loaded.pickle",
@@ -134,8 +118,7 @@ def example_normalized_modified_args() -> list[str]:
 @pytest.fixture
 def example_collector_args() -> list[str]:
     collector_args = [
-        "125",
-        "--update",
+        "update",
         "--key",
         "test_api_key",
         "--start-date",
@@ -151,8 +134,7 @@ def example_collector_args() -> list[str]:
 @pytest.fixture
 def example_simple_collector_args() -> list[str]:
     simple_collector_args = [
-        "125",
-        "--update",
+        "update",
     ]
 
     return simple_collector_args
@@ -183,7 +165,6 @@ def test_main_collector(
         "Initialized NvdCollector to search CVEs from 2024-01-01 00:00:00 until 2024-02-01 00:00:00."
         in caplog.text
     )
-    assert "Projected CVSS: 7.5" in caplog.text
 
 
 @patch.object(ec3.collector.NvdCollector, "pull_target_data")
@@ -192,4 +173,4 @@ def test_main_simple_collector(
 ):
     mock_pulled_data.return_value = [example_cve_data]
     ec3.cli.main(example_simple_collector_args)
-    assert "Projected CVSS: 7.5" in caplog.text
+    assert "Initialized NvdCollector to search CVEs from " in caplog.text

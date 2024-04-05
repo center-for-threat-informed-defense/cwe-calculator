@@ -106,7 +106,7 @@ class Cvss31Calculator:
         try:
             return cwe_id is not None and int(cwe_id) > 0
         except ValueError:
-            logging.warning("Caught ValueError. CWE ID provided was not a usable ID.")
+            logger.warning("Caught ValueError. CWE ID provided was not a usable ID.")
 
         return False
 
@@ -155,7 +155,7 @@ class Cvss31Calculator:
                 else:
                     cwes.append(int(cwe.value.split("-")[1].strip()))
             except (IndexError, ValueError):
-                logging.warning(
+                logger.warning(
                     "Encountered error while parsing CWE ID from vulnerability data. "
                     "Skipping this entry."
                 )
@@ -200,10 +200,10 @@ class Cvss31Calculator:
             None
         """
 
-        logging.debug("Loading vulnerability information from a saved data file.")
+        logger.debug("Loading vulnerability information from a saved data file.")
 
         if data_file_str is None:
-            logging.debug(
+            logger.debug(
                 f"No data_file provided, "
                 f"setting to default file: {data_default_file}"
             )
@@ -215,11 +215,11 @@ class Cvss31Calculator:
             )
             self.set_vulnerability_data(new_data=loaded_data)
         except FileNotFoundError:
-            logging.warning("Caught FileNotFoundError. Input file not found.")
+            logger.warning("Caught FileNotFoundError. Input file not found.")
         except PermissionError:
-            logging.warning("Caught PermissionError. Unable to read data file.")
+            logger.warning("Caught PermissionError. Unable to read data file.")
         except pickle.UnpicklingError:
-            logging.warning(
+            logger.warning(
                 "Caught UnpicklingError. Input file not in correct pickle format."
             )
 
@@ -256,30 +256,28 @@ class Cvss31Calculator:
                             if lines[1] != "Other" and lines[1] != cwe_id.__str__():
                                 normalized_id = int(lines[1])
 
-                                logging.debug(
+                                logger.debug(
                                     f"CWE ID {cwe_id} matched normalization ID "
                                     f"{normalized_id}."
                                 )
 
                                 return normalized_id
                         except ValueError:
-                            logging.warning(
+                            logger.warning(
                                 "Caught ValueError. "
                                 "CWE ID found, but normalized value is not a usable ID."
                             )
 
                 # The whole file was searched without error. Notify the user that no
                 # match was found.
-                logging.debug(f"CWE ID {cwe_id} does not normalize to a new ID.")
+                logger.debug(f"CWE ID {cwe_id} does not normalize to a new ID.")
 
         except FileNotFoundError:
-            logging.warning(
+            logger.warning(
                 "Caught FileNotFoundError. Input normalization file not found."
             )
         except PermissionError:
-            logging.warning(
-                "Caught PermissionError. Unable to open normalization file."
-            )
+            logger.warning("Caught PermissionError. Unable to open normalization file.")
 
         # If still here, then no value was found or an error was encountered.
         # Return nothing found
@@ -442,13 +440,13 @@ class Cvss31Calculator:
                         for cwe in cwes_for_cve:
                             self.cwe_data[cwe].append([cve.id, base_cvss])
                 except ValueError:
-                    logging.error(
+                    logger.error(
                         "Caught ValueError parsing CWE data from vulnerabilities."
                     )
                     raise
 
         # Display the number of CVE entries in the raw_cve_data
-        logging.debug(f"Processed {cve_count} vulnerabilities.")
+        logger.debug(f"Processed {cve_count} vulnerabilities.")
 
         return None
 
@@ -498,6 +496,10 @@ class Cvss31Calculator:
                     score_values.append(scores)
                     cve_ids.append(cve_id)
 
+                results_stdev: float = 0.0
+                if len(score_values) > 1:
+                    results_stdev = statistics.stdev([item[0] for item in score_values])
+
                 # Create an output format with all required information
                 # score_values holds [base, environmental] calculated scores
                 # self.cwe_data is a dict that holds a list of [cve_id, Cvss31] list
@@ -513,6 +515,7 @@ class Cvss31Calculator:
                     "Average CVSS Base Score": statistics.mean(
                         [item[0] for item in score_values]
                     ),
+                    "Standard Deviation CVSS Base Score": results_stdev,
                     "CVE Records": cve_ids,
                 }
 
@@ -522,16 +525,17 @@ class Cvss31Calculator:
                 logger.debug(f"No vulnerability data found for CWE ID {cwe_id}.")
 
         else:
-            logger.debug("CWE ID provided was not a usable ID.")
+            logger.warning("CWE ID provided was not a usable ID.")
 
         # Use the same output format but report no data found.
         empty_results: dict = {
-            "Projected CVSS": 0,
+            "Projected CVSS": 0.0,
             "CWE": cwe_id,
             "Count": 0,
-            "Min CVSS Base Score": 0,
-            "Max CVSS Base Score": 0,
-            "Average CVSS Base Score": 0,
+            "Min CVSS Base Score": 0.0,
+            "Max CVSS Base Score": 0.0,
+            "Average CVSS Base Score": 0.0,
+            "Standard Deviation CVSS Base Score": 0.0,
             "CVE Records": [],
         }
 
@@ -561,25 +565,32 @@ class Cvss31Calculator:
                 cve_cols = 4
 
             table_width: int = 40
-            table_title = "Base CVSS Scores"
-            logger.info(f"Vulnerability data found for CWE ID {ec3_results['CWE']}:")
+            logger.info(f"Calculating CVSS for CWE ID {ec3_results['CWE']}:")
             logger.info(f"Projected CVSS: {ec3_results['Projected CVSS']}")
-            # Print a centered table head for a table of width [table_width].
-            print(
-                f"{'-'*table_width}\n{' '*((table_width - len(table_title))//2)}"
-                f"{table_title}\n{'-'*table_width}"
-            )
-            print(f" Min: {ec3_results['Min CVSS Base Score']}")
-            print(f" Max: {ec3_results['Max CVSS Base Score']}")
-            print(f" Average: {ec3_results['Average CVSS Base Score']}")
-            print(f"{'-'*table_width}")
-            print(
-                f"Found {ec3_results['Count']} related CVE record"
-                f"{'s' if ec3_results['Count'] > 1 else ''}:"
-            )
-            for i in range(0, len(ec3_results["CVE Records"]), cve_cols):
-                print("\t".join(ec3_results["CVE Records"][i : i + cve_cols]))
+            print()  # Print blank line to stdout for readability.
+            logger.info(f"{'-'*table_width}")  # Print a line of dashes for separation.
+            print()
+            logger.info("Additional Information")
+            print()
+            logger.info(f" Min: {ec3_results['Min CVSS Base Score']}")
+            logger.info(f" Max: {ec3_results['Max CVSS Base Score']}")
+            logger.info(f" Average: {ec3_results['Average CVSS Base Score']}")
+            logger.info(f" Stdev: {ec3_results['Standard Deviation CVSS Base Score']}")
+            print()
 
+            cve_str: str = ""
+            for i in range(0, len(ec3_results["CVE Records"]), cve_cols):
+                cve_str += "\n"
+                cve_str += "\t".join(ec3_results["CVE Records"][i : i + cve_cols])
+
+            cve_str += "\n"
+
+            logger.info(
+                f"Found {ec3_results['Count']} related CVE record"
+                f"{'s' if ec3_results['Count'] > 1 else ''}:\n{cve_str}"
+            )
+            logger.info(f"{'-'*table_width}")
+            print()  # Print blank line to standard output
         else:
             if not self.__results_valid(ec3_results):
                 logger.warning("No ec3 results dictionary provided.")
@@ -646,6 +657,10 @@ class Cvss31Calculator:
                 results_invalid = True
             if not Cvss31Calculator.__dict_key_matches_type(
                 ec3_results, "Average CVSS Base Score", float
+            ):
+                results_invalid = True
+            if not Cvss31Calculator.__dict_key_matches_type(
+                ec3_results, "Standard Deviation CVSS Base Score", float
             ):
                 results_invalid = True
             if not Cvss31Calculator.__dict_key_matches_type(

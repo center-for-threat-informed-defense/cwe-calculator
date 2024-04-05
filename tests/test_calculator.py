@@ -515,6 +515,7 @@ def test_calculate_results_verbose(example_calculator):
         "Min CVSS Base Score": 7.5,
         "Max CVSS Base Score": 7.5,
         "Average CVSS Base Score": 7.5,
+        "Standard Deviation CVSS Base Score": 0.0,
         "CVE Records": ["CVE-2014-0160"],
     }
 
@@ -535,18 +536,19 @@ def test_output_results(caplog, example_calculator, example_results):
     caplog.set_level(logging.DEBUG)
     example_calculator.output_results(example_results)
     print(caplog.text)
-    assert "Vulnerability data found for CWE ID 125:" in caplog.text
+    assert "Calculating CVSS for CWE ID 125:" in caplog.text
     assert "Projected CVSS: 7.5" in caplog.text
 
 
-def test_output_results_verbose(capsys, caplog, example_calculator, example_results):
+def test_output_results_verbose(caplog, example_calculator, example_results):
     caplog.set_level(logging.DEBUG)
     example_calculator.output_results(example_results)
-    captured = capsys.readouterr()
-    assert "Vulnerability data found for CWE ID 125:" in caplog.text
     assert "Projected CVSS: 7.5" in caplog.text
-    assert " Min: 7.5\n Max: 7.5\n Average: 7.5" in captured.out
-    assert "Found 1 related CVE record:\nCVE-2014-0160" in captured.out
+    assert " Min: 7.5" in caplog.text
+    assert " Max: 7.5" in caplog.text
+    assert " Average: 7.5" in caplog.text
+    assert "Found 1 related CVE record:" in caplog.text
+    assert "CVE-2014-0160" in caplog.text
 
 
 def test_set_cvss_modifiers(example_calculator):

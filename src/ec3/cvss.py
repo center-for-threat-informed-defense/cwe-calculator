@@ -212,9 +212,7 @@ class Cvss31:
             self.set_ma(ma)
 
         except ValueError:
-            logging.warning(
-                "Caught ValueError. Error while initializing Cvss31 values."
-            )
+            logger.warning("Caught ValueError. Error while initializing Cvss31 values.")
             raise
 
     @classmethod

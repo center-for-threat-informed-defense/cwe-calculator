@@ -68,7 +68,7 @@ class NvdCollector:
             start_date=start_date, end_date=end_date
         )
 
-        logger.debug(
+        logger.info(
             f"Initialized NvdCollector to search CVEs from "
             f"{self.start_date} until {self.end_date}."
         )
@@ -100,23 +100,23 @@ class NvdCollector:
         cur_date = datetime.now()
 
         if start_date < datetime(2020, 1, 1, 0, 0, 0):
-            logging.debug("start_date is prior to 2020-1-1. Adjusting to 2020-1-1.")
+            logger.warning("start_date is prior to 2020-1-1. Adjusting to 2020-1-1.")
             start_date = datetime(2020, 1, 1, 0, 0, 0)
 
         if cur_date < start_date:
-            logger.debug(
+            logger.warning(
                 f"start_date is later than the current date. Adjusting to {cur_date}."
             )
             start_date = cur_date
 
         if end_date < start_date:
-            logger.debug(
+            logger.warning(
                 f"end_date is earlier than start_date. Adjusting to {start_date}."
             )
             end_date = start_date
 
         if cur_date < end_date:
-            logger.debug(
+            logger.warning(
                 f"end_date is later than the current date and time. "
                 f"Adjusting to {cur_date}."
             )
@@ -137,54 +137,64 @@ class NvdCollector:
 
         cve_search: list[nvd_classes.CVE] = []
 
-        # If the date range is not within the [max_date_range] number of days,
-        # set a scrolling temporary date window for each API call. Otherwise, only
-        # call the API once.
-        if self.end_date - self.start_date > timedelta(days=max_date_range):
-            # The NVD 2.0 API can only handle a max date range of [max_date_range]
-            # days. Ranges provided larger than this will need to be split across
-            # multiple API calls. We set a scrolling window and aggregate the data.
+        for temp_range_start, temp_range_end in self.generate_time_ranges(
+            self.start_date, self.end_date
+        ):
             logger.debug(
-                f"Target range {self.start_date} through {self.end_date} is larger "
+                f"Calling from ({temp_range_start}) through ({temp_range_end})."
+            )
+            temp_cve_search: list[nvd_classes.CVE] = nvdlib.searchCVE(
+                key=self.api_key,
+                pubStartDate=temp_range_start,
+                pubEndDate=temp_range_end,
+            )
+            cve_search.extend(temp_cve_search)
+
+        return cve_search
+
+    @staticmethod
+    def generate_time_ranges(
+        start_date: datetime, end_date: datetime
+    ) -> list[datetime]:
+        """Create datetime ranges within the API maximum limits for the desired bounds.
+
+        The NVD 2.0 API can only handle a max date range of [max_date_range] days.
+        Requested ranges larger than this will need to be split across multiple API
+        calls.
+
+        Args:
+            start_date: The earliest datetime range bound to pass to the NVD API.
+            end_date: The latest datetime range bound to pass to the NVD API.
+
+        Yields:
+            A list of two datetime values representing the start and end bounds for the
+            API call, which are [max_date_range] days apart or less.
+        """
+        if end_date - start_date > timedelta(days=max_date_range):
+            logger.debug(
+                f"Target range {start_date} through {end_date} is larger "
                 f"than {max_date_range} days. Splitting into multiple calls for a "
                 f"scrolling {max_date_range} day time range."
             )
-            temp_range_start: datetime = self.start_date
-            temp_range_end: datetime = self.start_date + timedelta(days=max_date_range)
+            temp_range_start: datetime = start_date
+            temp_range_end: datetime = start_date + timedelta(days=max_date_range)
 
-            # Call the API for the current temporary date range, then check if we have
-            # reached the end of the range. Append the data returned from this
-            # scrolling date window's API call to the aggregate results. The loop ends
-            # if (temp_range_end = self.end_date), after we called the API for this
-            # last window. If the loop is not over, adjust the scrolling date window
-            # range and call the API again.
+            # The datetime difference was more than the maximum range, yield a set of
+            # [start, end] datetime values then shift the scrolling window.
+            # The loop ends if (temp_range_end = end_date), after we yielded the range
+            # values for the previous window.
             while True:
-                logger.debug(
-                    f"Calling from ({temp_range_start}) through ({temp_range_end})."
-                )
-                temp_cve_search: list[nvd_classes.CVE] = nvdlib.searchCVE(
-                    key=self.api_key,
-                    pubStartDate=temp_range_start,
-                    pubEndDate=temp_range_end,
-                )
-                cve_search.extend(temp_cve_search)
-
-                if not temp_range_end < self.end_date:
+                yield [temp_range_start, temp_range_end]
+                if not temp_range_end < end_date:
                     break
 
                 temp_range_start = temp_range_end
                 temp_range_end = min(
                     temp_range_start + timedelta(days=max_date_range),
-                    self.end_date,
+                    end_date,
                 )
         else:
-            cve_search = nvdlib.searchCVE(
-                key=self.api_key,
-                pubStartDate=self.start_date,
-                pubEndDate=self.end_date,
-            )
-
-        return cve_search
+            yield [start_date, end_date]
 
     @staticmethod
     def save_data_to_file(

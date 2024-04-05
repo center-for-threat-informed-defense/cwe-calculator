@@ -70,6 +70,26 @@ Some examples of common commands would include:
 
 `ec3-cli calculate 787 -e U -mpr H -v`
 
+### Understanding the Process
+
+The CVSS Calculator uses the following methodology when providing potential CVSS scores:
+
+Pre-requisite: *The desired environmental and temporal CVSS v3.1 metrics have been
+provided*.
+
+For each CVE Record that contains a CVSS v3.1 base score:
+
+- Apply the environmental and temporal metrics to the base CVSS.
+- Associate the CVE Record ID and CVSS metrics to each related CWE Identifier.
+
+When calculating the results for a specific CWE Identifier:
+
+- Provide the projected CVSS score from the environmental+temporal+base CVSS
+  calculation.
+    - This is a statistical mean of all numeric CVSS scores.
+- Provide min/max/average/stdev from the base CVSS calculation.
+- Additionally list each CVE Record associated with the CWE Identifer
+
 | Resource                                                                        | Description                                                                      |
 |---------------------------------------------------------------------------------|----------------------------------------------------------------------------------|
 | [NVD API Request](https://nvd.nist.gov/developers/request-an-api-key)           | The form for developers to request an API key.                                   |

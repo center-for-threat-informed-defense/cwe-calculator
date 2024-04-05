@@ -185,7 +185,7 @@ class Cvss31Calculator:
         )
 
     def load_data_file(self, data_file_str: str | None = None) -> None:
-        """Loads a previously saved pickle file containing NVD vulnerability data.
+        """Load a previously saved pickle file containing NVD vulnerability data.
 
         Loads vulnerability data into a list containing nvdlib.classes.CVE objects. If
         unable to load data from the specified or default data file, assigns the

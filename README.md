@@ -62,9 +62,19 @@ for more information.
 
 Some examples of common commands would include:
 
+** Downloading a set of NVD data **
+
+`ec3-cli update`
+
+`ec3-cli update --keyfile [path_to_key] --start-date 2023-01-01 --end-date 2024-01-01`
+
+** Running CWE-only query **
+
 `ec3-cli calculate 787`
 
 `ec3-cli calculate 121 -v`
+
+** Running more advanced queries such as normalization or modifying metrics **
 
 `ec3-cli calculate 121 --normalize_file ./data/normalized.csv -v`
 

@@ -79,7 +79,7 @@ class Cvss31Calculator:
         self.modified_integrity: str = "X"
         self.modified_availability: str = "X"
 
-        # Set self.raw_cve_data to default data file contents.
+        # Load vulnerability data from either the provided or default data file.
         if data_file_str:
             self.load_data_file(data_file_str)
         else:
@@ -527,7 +527,8 @@ class Cvss31Calculator:
         else:
             logger.warning("CWE ID provided was not a usable ID.")
 
-        # Use the same output format but report no data found.
+        # If the CWE ID was invalid, or if no vulnerability data maps to the requested
+        # or normalized CWE ID, then construct an empty results dictionary.
         empty_results: dict = {
             "Projected CVSS": 0.0,
             "CWE": cwe_id,
@@ -559,23 +560,24 @@ class Cvss31Calculator:
         if self.__results_valid(ec3_results) and self.__cwe_id_valid(
             ec3_results["CWE"]
         ):
-            # If negative or bad value provided, set back to default of 4 columns
-            # per line.
+            # If negative or bad value provided, revert the number of columns back to 4.
             if not isinstance(cve_cols, int) or cve_cols < 1:
                 cve_cols = 4
 
             table_width: int = 40
             logger.info(f"Calculating CVSS for CWE ID {ec3_results['CWE']}:")
-            logger.info(f"Projected CVSS: {ec3_results['Projected CVSS']}")
+            logger.info(f"Projected CVSS: {ec3_results['Projected CVSS']:.2f}")
             print()  # Print blank line to stdout for readability.
             logger.info(f"{'-'*table_width}")  # Print a line of dashes for separation.
             print()
             logger.info("Additional Information")
             print()
-            logger.info(f" Min: {ec3_results['Min CVSS Base Score']}")
-            logger.info(f" Max: {ec3_results['Max CVSS Base Score']}")
-            logger.info(f" Average: {ec3_results['Average CVSS Base Score']}")
-            logger.info(f" Stdev: {ec3_results['Standard Deviation CVSS Base Score']}")
+            logger.info(f" Min: {ec3_results['Min CVSS Base Score']:.2f}")
+            logger.info(f" Max: {ec3_results['Max CVSS Base Score']:.2f}")
+            logger.info(f" Average: {ec3_results['Average CVSS Base Score']:.2f}")
+            logger.info(
+                f" Stdev: {ec3_results['Standard Deviation CVSS Base Score']:.2f}"
+            )
             print()
 
             cve_str: str = ""
@@ -590,7 +592,7 @@ class Cvss31Calculator:
                 f"{'s' if ec3_results['Count'] > 1 else ''}:\n{cve_str}"
             )
             logger.info(f"{'-'*table_width}")
-            print()  # Print blank line to standard output
+            print()
         else:
             if not self.__results_valid(ec3_results):
                 logger.warning("No ec3 results dictionary provided.")

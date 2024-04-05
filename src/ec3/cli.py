@@ -323,9 +323,9 @@ def main(arg_list: list[str] | None = None) -> None:
     _setup_logging(args.verbose)
     logger = logging.getLogger(__name__)
 
-    print()  # Print blank line to standard output
+    print()  # Print blank line to stdout
     logger.info("*** Environmental CWE CVSS Calculator (ec3) ***")
-    print()  # Print blank line to standard output
+    print()
     logger.debug(f"Input arguments: {args}")
 
     # Initialize variable to hold vulnerability data in memory. If an update is

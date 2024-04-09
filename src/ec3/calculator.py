@@ -301,7 +301,7 @@ class Cvss31Calculator:
             TypeError: The new_data provided was not a list of CVE objects.
         """
 
-        if not isinstance(new_data, list) or not any(
+        if not isinstance(new_data, list) or not all(
             isinstance(record, nvd_classes.CVE) for record in new_data
         ):
             raise TypeError(

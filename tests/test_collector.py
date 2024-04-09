@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 import nvdlib
 import pytest
-from mock import patch
+from mock import patch, Mock
 from nvdlib import classes as nvd_classes
 
 import ec3.collector
@@ -111,15 +111,16 @@ def test_search_cve_scrolling(mock_search_cve, example_cve_data):
     assert test_collector.pull_target_data() == [example_cve_data, example_cve_data]
 
 
+@patch.object(ec3.collector, "datetime", Mock(wraps=datetime))
 def test_adjust_valid_dates_bounds():
-
+    ec3.collector.datetime.now.return_value = datetime(2024, 4, 1, 0, 0, 0)
     # Test adjust_valid_dates with bounds beyond the expected range.
     test_collector = ec3.collector.NvdCollector(
         start_date=datetime(1995, 10, 10, 0, 0, 0),
         end_date=datetime(2200, 11, 11, 0, 0, 0),
     )
     assert test_collector.start_date == datetime(2020, 1, 1, 0, 0, 0)
-    assert test_collector.end_date <= datetime.now()
+    assert test_collector.end_date == datetime(2024, 4, 1, 0, 0, 0)
 
 
 def test_adjust_valid_dates_swap():

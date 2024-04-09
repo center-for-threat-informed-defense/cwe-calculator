@@ -690,18 +690,18 @@ class Cvss31Calculator:
                 # self.cwe_data is a dict that holds a list of [cve_id, Cvss31] list
                 # entries indexed by the CWE ID
                 calculator_results: dict = {
-                    "Projected CVSS": statistics.mean(
+                    "projected_cvss": statistics.mean(
                         [item[1] for item in score_values]
                     ),
-                    "CWE": cwe_id,
-                    "Count": len(self.cwe_data[cwe_id]),
-                    "Min CVSS Base Score": min([item[0] for item in score_values]),
-                    "Max CVSS Base Score": max([item[0] for item in score_values]),
-                    "Average CVSS Base Score": statistics.mean(
+                    "cwe": cwe_id,
+                    "count": len(self.cwe_data[cwe_id]),
+                    "min_cvss_base_score": min([item[0] for item in score_values]),
+                    "max_cvss_base_score": max([item[0] for item in score_values]),
+                    "avg_cvss_base_score": statistics.mean(
                         [item[0] for item in score_values]
                     ),
-                    "Standard Deviation CVSS Base Score": results_stdev,
-                    "CVE Records": cve_ids,
+                    "std_dev_cvss_base_score": results_stdev,
+                    "cve_records": cve_ids,
                 }
 
                 return calculator_results
@@ -715,14 +715,14 @@ class Cvss31Calculator:
         # If the CWE ID was invalid, or if no vulnerability data maps to the requested
         # or normalized CWE ID, then construct an empty results dictionary.
         empty_results: dict = {
-            "Projected CVSS": 0.0,
-            "CWE": cwe_id,
-            "Count": 0,
-            "Min CVSS Base Score": 0.0,
-            "Max CVSS Base Score": 0.0,
-            "Average CVSS Base Score": 0.0,
-            "Standard Deviation CVSS Base Score": 0.0,
-            "CVE Records": [],
+            "projected_cvss": 0.0,
+            "cwe": cwe_id,
+            "count": 0,
+            "min_cvss_base_score": 0.0,
+            "max_cvss_base_score": 0.0,
+            "avg_cvss_base_score": 0.0,
+            "std_dev_cvss_base_score": 0.0,
+            "cve_records": [],
         }
 
         return empty_results
@@ -743,38 +743,36 @@ class Cvss31Calculator:
         """
 
         if self.__results_valid(ec3_results) and self.__cwe_id_valid(
-            ec3_results["CWE"]
+            ec3_results["cwe"]
         ):
             # If negative or bad value provided, revert the number of columns back to 4.
             if not isinstance(cve_cols, int) or cve_cols < 1:
                 cve_cols = 4
 
             table_width: int = 40
-            logger.info(f"Calculating CVSS for CWE ID {ec3_results['CWE']}:")
-            logger.info(f"Projected CVSS: {ec3_results['Projected CVSS']:.2f}")
+            logger.info(f"Calculating CVSS for CWE ID {ec3_results['cwe']}:")
+            logger.info(f"Projected CVSS: {ec3_results['projected_cvss']:.2f}")
             print()  # Print blank line to stdout for readability.
             logger.info(f"{'-'*table_width}")  # Print a line of dashes for separation.
             print()
             logger.info("Additional Information")
             print()
-            logger.info(f" Min: {ec3_results['Min CVSS Base Score']:.2f}")
-            logger.info(f" Max: {ec3_results['Max CVSS Base Score']:.2f}")
-            logger.info(f" Average: {ec3_results['Average CVSS Base Score']:.2f}")
-            logger.info(
-                f" Stdev: {ec3_results['Standard Deviation CVSS Base Score']:.2f}"
-            )
+            logger.info(f" Min: {ec3_results['min_cvss_base_score']:.2f}")
+            logger.info(f" Max: {ec3_results['max_cvss_base_score']:.2f}")
+            logger.info(f" Average: {ec3_results['avg_cvss_base_score']:.2f}")
+            logger.info(f" Stdev: {ec3_results['std_dev_cvss_base_score']:.2f}")
             print()
 
             cve_str: str = ""
-            for i in range(0, len(ec3_results["CVE Records"]), cve_cols):
+            for i in range(0, len(ec3_results["cve_records"]), cve_cols):
                 cve_str += "\n"
-                cve_str += "\t".join(ec3_results["CVE Records"][i : i + cve_cols])
+                cve_str += "\t".join(ec3_results["cve_records"][i : i + cve_cols])
 
             cve_str += "\n"
 
             logger.info(
-                f"Found {ec3_results['Count']} related CVE record"
-                f"{'s' if ec3_results['Count'] > 1 else ''}:\n{cve_str}"
+                f"Found {ec3_results['count']} related CVE record"
+                f"{'s' if ec3_results['count'] > 1 else ''}:\n{cve_str}"
             )
             logger.info(f"{'-'*table_width}")
             print()
@@ -827,36 +825,36 @@ class Cvss31Calculator:
         if ec3_results:
             #
             if not Cvss31Calculator.__dict_key_matches_type(
-                ec3_results, "Projected CVSS", float
+                ec3_results, "projected_cvss", float
             ):
                 results_invalid = True
-            if not Cvss31Calculator.__dict_key_matches_type(ec3_results, "CWE", int):
+            if not Cvss31Calculator.__dict_key_matches_type(ec3_results, "cwe", int):
                 results_invalid = True
-            if not Cvss31Calculator.__dict_key_matches_type(ec3_results, "Count", int):
-                results_invalid = True
-            if not Cvss31Calculator.__dict_key_matches_type(
-                ec3_results, "Min CVSS Base Score", float
-            ):
+            if not Cvss31Calculator.__dict_key_matches_type(ec3_results, "count", int):
                 results_invalid = True
             if not Cvss31Calculator.__dict_key_matches_type(
-                ec3_results, "Max CVSS Base Score", float
+                ec3_results, "min_cvss_base_score", float
             ):
                 results_invalid = True
             if not Cvss31Calculator.__dict_key_matches_type(
-                ec3_results, "Average CVSS Base Score", float
+                ec3_results, "max_cvss_base_score", float
             ):
                 results_invalid = True
             if not Cvss31Calculator.__dict_key_matches_type(
-                ec3_results, "Standard Deviation CVSS Base Score", float
+                ec3_results, "avg_cvss_base_score", float
             ):
                 results_invalid = True
             if not Cvss31Calculator.__dict_key_matches_type(
-                ec3_results, "CVE Records", list
+                ec3_results, "std_dev_cvss_base_score", float
+            ):
+                results_invalid = True
+            if not Cvss31Calculator.__dict_key_matches_type(
+                ec3_results, "cve_records", list
             ):
                 results_invalid = True
             else:
                 # "CVE Records" was a valid key of type list within ec3_results
-                for cve in ec3_results["CVE Records"]:
+                for cve in ec3_results["cve_records"]:
                     if not isinstance(cve, str):
                         results_invalid = True
 

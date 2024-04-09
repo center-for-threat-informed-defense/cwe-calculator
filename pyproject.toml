@@ -30,6 +30,7 @@ mock = "^5.1.0"
 
 [tool.poetry.scripts]
 ec3-cli = "ec3.cli:main"
+ec3-server = "ec3.server:main"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

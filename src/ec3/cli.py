@@ -13,7 +13,6 @@ Copyright (c) 2024 The MITRE Corporation. All rights reserved.
 import argparse
 import logging
 import pathlib
-import sys
 from datetime import datetime, timedelta
 
 from nvdlib import classes as nvd_classes  # type: ignore
@@ -21,6 +20,7 @@ from requests.exceptions import SSLError
 
 from ec3.calculator import Cvss31Calculator
 from ec3.collector import NvdCollector, date_difference_default
+from ec3.logging import setup_logging
 
 
 def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
@@ -274,38 +274,6 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     return parser.parse_args(arg_list)
 
 
-def _setup_logging(verbose: bool = False) -> None:
-    """Configure logging.
-
-    Args:
-        verbose: Boolean value representing whether to use the more verbose
-            logging.DEBUG over the default logging.INFO
-
-    Returns:
-        None
-    """
-
-    # Define log file and console logging parameters
-    log_level = logging.DEBUG if verbose else logging.INFO
-    log_format = "%(asctime)s [%(name)s] %(levelname)s: %(message)s"
-    log_date_format = "%Y-%m-%d %H:%M:%S"
-    log_filename = "ec3.log"
-    log_formatter = logging.Formatter(log_format, log_date_format)
-
-    console_format = "%(message)s"
-    console_formatter = logging.Formatter(console_format)
-
-    # Write to both standard console output, and a log file
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(console_formatter)
-    log_handler = logging.FileHandler(filename=log_filename)
-    log_handler.setFormatter(log_formatter)
-    logger = logging.getLogger()
-    logger.addHandler(console_handler)
-    logger.addHandler(log_handler)
-    logger.setLevel(log_level)
-
-
 def main(arg_list: list[str] | None = None) -> None:
     """Orchestrate the collection and evaluation of NVD vulnerability data using
         ec3 classes.
@@ -320,7 +288,7 @@ def main(arg_list: list[str] | None = None) -> None:
     # Parse CLI arguments
     args = parse_args(arg_list)
 
-    _setup_logging(args.verbose)
+    setup_logging("ec3.log", args.verbose)
     logger = logging.getLogger(__name__)
 
     print()  # Print blank line to stdout

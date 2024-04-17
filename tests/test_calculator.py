@@ -1,6 +1,8 @@
 import builtins
+import io
 import logging
 
+import pickle
 import pytest
 from mock import patch, mock_open
 from nvdlib import classes as nvd_classes
@@ -153,6 +155,26 @@ def example_cve_data_to_normalize() -> nvd_classes.CVE:
 @pytest.fixture
 def mock_normalization(monkeypatch):
     normalized_file_patch = mock_open(read_data="126,125\n130,Other")
+    monkeypatch.setattr(builtins, "open", normalized_file_patch)
+
+
+@pytest.fixture
+def mock_normalization_type_error(monkeypatch):
+    normalized_file_patch = mock_open(read_data="126,125\n130,Bad")
+    monkeypatch.setattr(builtins, "open", normalized_file_patch)
+
+
+@pytest.fixture
+def mock_normalization_file_not_found_error(monkeypatch):
+    normalized_file_patch = mock_open(read_data="126,125\n130,Bad")
+    normalized_file_patch.side_effect = FileNotFoundError
+    monkeypatch.setattr(builtins, "open", normalized_file_patch)
+
+
+@pytest.fixture
+def mock_normalization_permission_error(monkeypatch):
+    normalized_file_patch = mock_open(read_data="126,125\n130,Bad")
+    normalized_file_patch.side_effect = PermissionError
     monkeypatch.setattr(builtins, "open", normalized_file_patch)
 
 
@@ -737,8 +759,149 @@ def test_output_results_normalized(
 
 def test_load_normalize_file_none(caplog, example_calculator_mock_normalized):
     caplog.set_level(logging.DEBUG)
+
+    # Initialization sets file to default value.
+    # Call directly with no parameters to send None
     example_calculator_mock_normalized.load_normalization_file()
     assert (
         "No normalization file provided, setting to default file: ./data/normalized.csv"
         in caplog.text
     )
+
+
+def test_load_normalize_file_type_error(caplog, mock_normalization_type_error):
+    caplog.set_level(logging.DEBUG)
+    test_calculator = ec3.calculator.Cvss31Calculator(
+        normalization_file_str="/fake/file"
+    )
+    assert (
+        "Caught TypeError. Input normalization file not in the correct format."
+        in caplog.text
+    )
+
+
+def test_normalize_cwe_value_error(caplog, example_cve_data):
+    caplog.set_level(logging.DEBUG)
+    test_calculator = ec3.calculator.Cvss31Calculator()
+    test_calculator.set_vulnerability_data([example_cve_data])
+    test_calculator.raw_normalization_data = [[125, "Bad"]]
+    test_calculator.calculate_results(125, True)
+    assert (
+        "Caught ValueError. CWE ID found, but normalized value is not a usable ID."
+        in caplog.text
+    )
+
+
+def test_load_normalize_file_not_found_error(
+    caplog, mock_normalization_file_not_found_error
+):
+    caplog.set_level(logging.DEBUG)
+    test_calculator = ec3.calculator.Cvss31Calculator(
+        normalization_file_str="/fake/file"
+    )
+    assert (
+        "Caught FileNotFoundError. Input normalization file not found." in caplog.text
+    )
+
+
+def test_load_normalize_permission_error(caplog, mock_normalization_permission_error):
+    caplog.set_level(logging.DEBUG)
+    test_calculator = ec3.calculator.Cvss31Calculator(
+        normalization_file_str="/fake/file"
+    )
+    assert "Caught PermissionError. Unable to read normalization file." in caplog.text
+
+
+@patch.object(ec3.calculator.Cvss31Calculator, "restricted_load")
+def test_calculator_normalization_file_blank(
+    mock_unpickle, mock_normalization, caplog, example_cve_data
+):
+    mock_unpickle.return_value = [example_cve_data]
+    caplog.set_level(logging.DEBUG)
+    test_calculator = ec3.calculator.Cvss31Calculator(normalization_file_str="")
+
+    assert [126, "125"] in test_calculator.raw_normalization_data
+
+
+@patch.object(ec3.calculator.Cvss31Calculator, "restricted_load")
+def test_calculator_unpickler(mock_unpickle, caplog, example_cve_data):
+    mock_unpickle.return_value = [example_cve_data]
+    caplog.set_level(logging.DEBUG)
+    test_calculator = ec3.calculator.Cvss31Calculator("/fake/file")
+
+    assert test_calculator.cwe_data[125]
+
+
+@patch.object(ec3.calculator.Cvss31Calculator, "restricted_load")
+def test_calculator_unpickler_data_file_None(mock_unpickle, caplog, example_cve_data):
+    mock_unpickle.return_value = [example_cve_data]
+    caplog.set_level(logging.DEBUG)
+    test_calculator = ec3.calculator.Cvss31Calculator()
+
+    # Initialization sets file to default value.
+    # Call directly with no parameters to send None
+    test_calculator.load_data_file()
+
+    assert (
+        "No data file provided, setting to default file: ./data/nvd_loaded.pickle"
+        in caplog.text
+    )
+
+
+@patch.object(ec3.calculator.Cvss31Calculator, "restricted_load")
+def test_calculator_load_data_file_not_found_error(
+    mock_unpickle, caplog, example_cve_data
+):
+    mock_unpickle.side_effect = FileNotFoundError
+    caplog.set_level(logging.DEBUG)
+    test_calculator = ec3.calculator.Cvss31Calculator()
+
+    assert "Caught FileNotFoundError. Input file not found." in caplog.text
+
+
+@patch.object(ec3.calculator.Cvss31Calculator, "restricted_load")
+def test_calculator_load_data_permission_error(mock_unpickle, caplog, example_cve_data):
+    mock_unpickle.side_effect = PermissionError
+    caplog.set_level(logging.DEBUG)
+    test_calculator = ec3.calculator.Cvss31Calculator()
+
+    assert "Caught PermissionError. Unable to read data file." in caplog.text
+
+
+@patch.object(ec3.calculator.Cvss31Calculator, "restricted_load")
+def test_calculator_load_data_permission_error(mock_unpickle, caplog, example_cve_data):
+    mock_unpickle.side_effect = PermissionError
+    caplog.set_level(logging.DEBUG)
+    test_calculator = ec3.calculator.Cvss31Calculator()
+
+    assert "Caught PermissionError. Unable to read data file." in caplog.text
+
+
+@patch.object(ec3.calculator.Cvss31Calculator, "restricted_load")
+def test_calculator_load_data_unpickling_error(mock_unpickle, caplog, example_cve_data):
+    mock_unpickle.side_effect = pickle.UnpicklingError
+    caplog.set_level(logging.DEBUG)
+    test_calculator = ec3.calculator.Cvss31Calculator()
+
+    assert (
+        "Caught UnpicklingError. Input file not in correct pickle format."
+        in caplog.text
+    )
+
+
+@patch.object(ec3.calculator.Cvss31Calculator, "restricted_load")
+def test_calculator_unpickler_data_file_blank(mock_unpickle, caplog, example_cve_data):
+    mock_unpickle.return_value = [example_cve_data]
+    caplog.set_level(logging.DEBUG)
+    test_calculator = ec3.calculator.Cvss31Calculator("")
+
+    assert test_calculator.cwe_data[125]
+
+
+@patch.object(ec3.calculator.Cvss31Calculator, "restricted_load")
+def test_calculator_unpickler_type_error(mock_unpickle, caplog, example_cve_data):
+    mock_unpickle.return_value = [example_cve_data]
+    caplog.set_level(logging.DEBUG)
+    test_calculator = ec3.calculator.Cvss31Calculator("")
+
+    assert test_calculator.cwe_data[125]

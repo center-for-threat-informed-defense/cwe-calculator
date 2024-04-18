@@ -33,22 +33,30 @@ class Cvss31Calculator:
 
     def __init__(
         self,
-        data_file_str: str = data_default_file,
-        normalization_file_str: str = normalization_default_file,
+        data_file_str: str | None = None,
+        normalization_file_str: str | None = None,
+        support_defaults: bool = True,
     ) -> None:
         """Initialize a Cvss31Calculator class instance using the provided parameters.
 
         Args:
-            data_file_str: A string representing the default location to load
+            data_file_str: An optional string representing the default location to load
                 vulnerability data from.
-            normalization_file_str: A string representing the normalization CSV file
-                location to use when calculating normalized results.
+            normalization_file_str: An optional string representing the normalization
+                CSV file location to use when calculating normalized results.
+            support_defaults: A boolean value representing whether to use a default file
+                name when not otherwise specified during initialization.
 
         Returns:
-            A Cvss31Calculator instance with the default/specified data file already
-                loaded into memory. All CVSS metric modifiers are initialized to
-                "Unknown"/"X". The internal CWE table has been constructed from the
-                call to load_data_file.
+            A Cvss31Calculator instance. All CVSS metric modifiers are initialized
+                to "Unknown"/"X".
+            When support_defaults is True, then this instance has the default/specified
+                data file already loaded into memory. The internal CWE table has
+                been constructed from the call to load_data_file.
+            A combination of no data_file_str provided and support_defaults being set
+                to False would result in no data file loaded into memory. The
+                internal CWE table would be empty. The user should expect to load
+                new vulnerability data prior to performing calculations.
         """
 
         # Hold a list of nvdlib.classes.CVE objects loaded from a collector or file.
@@ -78,16 +86,22 @@ class Cvss31Calculator:
         self.modified_integrity: str = "X"
         self.modified_availability: str = "X"
 
-        # Load vulnerability data from either the provided or default data file.
+        # If a non-True/False value is encountered, keep the default behavior of True
+        if not isinstance(support_defaults, bool):
+            support_defaults = True
+
+        # Optionally load vulnerability data from the provided data file, or default
+        # data file (if support_defaults is True)
         if data_file_str:
             self.load_data_file(data_file_str)
-        else:
+        elif support_defaults:
             self.load_data_file(data_default_file)
 
-        # Load normalization data from either the provided or default CSV file.
+        # Optionally load normalization data from the provided CSV file, or default
+        # CSV file (if support_defaults is True)
         if normalization_file_str:
             self.load_normalization_file(normalization_file_str)
-        else:
+        elif support_defaults:
             self.load_normalization_file(normalization_default_file)
 
         logger.debug("Initialized Cvss31Calculator.")

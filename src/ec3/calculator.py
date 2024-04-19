@@ -21,7 +21,7 @@ import statistics
 
 from nvdlib import classes as nvd_classes  # type: ignore
 
-from ec3 import data_default_file
+from ec3 import data_default_file, normalization_default_file
 from ec3.cvss import Cvss31
 
 logger = logging.getLogger(__name__)
@@ -33,30 +33,37 @@ class Cvss31Calculator:
 
     def __init__(
         self,
-        data_file_str: str = data_default_file,
-        normalization_file_str: str = "",
+        data_file_str: str | None = None,
+        normalization_file_str: str | None = None,
+        support_defaults: bool = True,
     ) -> None:
         """Initialize a Cvss31Calculator class instance using the provided parameters.
 
         Args:
-            data_file_str: A string representing the default location to load
+            data_file_str: An optional string representing the default location to load
                 vulnerability data from.
-            normalization_file_str: A string representing the normalization CSV file
-                location to use when calculating normalized results.
+            normalization_file_str: An optional string representing the normalization
+                CSV file location to use when calculating normalized results.
+            support_defaults: A boolean value representing whether to use a default file
+                name when not otherwise specified during initialization.
 
         Returns:
-            A Cvss31Calculator instance with the default/specified data file already
-                loaded into memory. All CVSS metric modifiers are initialized to
-                "Unknown"/"X". The internal CWE table has been constructed from the
-                call to load_data_file.
+            A Cvss31Calculator instance. All CVSS metric modifiers are initialized
+                to "Unknown"/"X".
+            When support_defaults is True, then this instance has the default/specified
+                data file already loaded into memory. The internal CWE table has
+                been constructed from the call to load_data_file.
+            A combination of no data_file_str provided and support_defaults being set
+                to False would result in no data file loaded into memory. The
+                internal CWE table would be empty. The user should expect to load
+                new vulnerability data prior to performing calculations.
         """
 
         # Hold a list of nvdlib.classes.CVE objects loaded from a collector or file.
         self.raw_cve_data: list[nvd_classes.CVE] = []
 
-        # Save the path to the normalization file to use when calculate_results is
-        # called with the 'normalize' flag.
-        self.normalization_file_str = normalization_file_str
+        # Hold a list of [int, str] loaded from a normalization file.
+        self.raw_normalization_data: list[list] = []
 
         # Dictionary that will map CWE ID to list of CVSS vectors
         self.cwe_data: dict[int, list[list]] = collections.defaultdict(list)
@@ -79,11 +86,23 @@ class Cvss31Calculator:
         self.modified_integrity: str = "X"
         self.modified_availability: str = "X"
 
-        # Load vulnerability data from either the provided or default data file.
+        # If a non-True/False value is encountered, keep the default behavior of True
+        if not isinstance(support_defaults, bool):
+            support_defaults = True
+
+        # Optionally load vulnerability data from the provided data file, or default
+        # data file (if support_defaults is True)
         if data_file_str:
             self.load_data_file(data_file_str)
-        else:
+        elif support_defaults:
             self.load_data_file(data_default_file)
+
+        # Optionally load normalization data from the provided CSV file, or default
+        # CSV file (if support_defaults is True)
+        if normalization_file_str:
+            self.load_normalization_file(normalization_file_str)
+        elif support_defaults:
+            self.load_normalization_file(normalization_default_file)
 
         logger.debug("Initialized Cvss31Calculator.")
 
@@ -164,7 +183,7 @@ class Cvss31Calculator:
         return cwes
 
     @staticmethod
-    def __restricted_load(file_str: str | None) -> list[nvd_classes.CVE]:
+    def restricted_load(file_str: str | None) -> list[nvd_classes.CVE]:
         """Restrict the loaded class type.
 
         Attempts to load a list of nvd_classes.CVE. This should prevent unsafe modules
@@ -204,13 +223,13 @@ class Cvss31Calculator:
 
         if data_file_str is None:
             logger.debug(
-                f"No data_file provided, "
+                f"No data file provided, "
                 f"setting to default file: {data_default_file}"
             )
             data_file_str = data_default_file
 
         try:
-            loaded_data: list[nvd_classes.CVE] = self.__restricted_load(
+            loaded_data: list[nvd_classes.CVE] = self.restricted_load(
                 file_str=data_file_str
             )
             self.set_vulnerability_data(new_data=loaded_data)
@@ -225,59 +244,96 @@ class Cvss31Calculator:
 
         return None
 
-    def normalize_cwe(self, cwe_id: int = 0) -> int | None:
-        """Load the normalization data CSV file and return the first valid corresponding
-            normalization CWE identifier.
+    def load_normalization_file(
+        self, normalization_file_str: str | None = None
+    ) -> None:
+        """Load the normalization data CSV file.
 
         The CSV file should only have one suggestion per CWE ID in the left column.
-        The file may map an identifier to itself or "Other". Both of these cases are
-        expected to set the normalization CWE ID to None. If unable to load data from
-        a file, file permissions are encountered, or no lookup value is found, set the
-        normalization CWE ID to None.
+        The file may map an identifier to itself or "Other". Load this data into a list
+        containing [int, str] pairs. If unable to load data from a file, assigns the
+        internal list to be empty. Calling this function will potentially replace
+        previously loaded data in memory.
 
         Args:
-            cwe_id: A CWE identifier used for the lookup in the left column of the
-                normalization CSV file.
+            normalization_file_str: String containing the path to a CSV file containing
+                CWE identifier and remapping/normalization suggestion data.
 
         Returns:
-            A CWE identifier of the normalized value to use in place of cwe_id, or None
-                if no new ID was found.
+            None
         """
 
+        logger.debug("Loading normalization suggestions from a CSV file.")
+
+        if normalization_file_str is None:
+            logger.debug(
+                f"No normalization file provided, "
+                f"setting to default file: {normalization_default_file}"
+            )
+            normalization_file_str = normalization_default_file
+
+        new_normalization_data: list[list] = []
         try:
-            with open(self.normalization_file_str, mode="r") as normalization_fh:
+            with open(normalization_file_str, mode="r") as normalization_fh:
                 normalization_file = csv.reader(normalization_fh)
-
-                # Check each line, return the first valid match. Otherwise, return None.
                 for lines in normalization_file:
-                    if lines[0] == cwe_id.__str__():
-                        # Cast the normalized value column as an integer and return
-                        try:
-                            if lines[1] != "Other" and lines[1] != cwe_id.__str__():
-                                normalized_id = int(lines[1])
+                    new_normalization_data.append([int(lines[0]), lines[1]])
 
-                                logger.debug(
-                                    f"CWE ID {cwe_id} matched normalization ID "
-                                    f"{normalized_id}."
-                                )
-
-                                return normalized_id
-                        except ValueError:
-                            logger.warning(
-                                "Caught ValueError. "
-                                "CWE ID found, but normalized value is not a usable ID."
-                            )
-
-                # The whole file was searched without error. Notify the user that no
-                # match was found.
-                logger.debug(f"CWE ID {cwe_id} does not normalize to a new ID.")
-
+            self.set_normalization_data(new_normalization_data)
+        except TypeError:
+            logger.warning(
+                "Caught TypeError. Input normalization file not in the correct format."
+            )
         except FileNotFoundError:
             logger.warning(
                 "Caught FileNotFoundError. Input normalization file not found."
             )
         except PermissionError:
-            logger.warning("Caught PermissionError. Unable to open normalization file.")
+            logger.warning("Caught PermissionError. Unable to read normalization file.")
+
+        return None
+
+    def normalize_cwe(self, cwe_id: int = 0) -> int | None:
+        """Return the first valid corresponding normalization CWE identifier from the
+        internal normalization data.
+
+
+        The normalization data may map an identifier to itself or "Other". Both of
+        these cases are expected to set the normalization CWE ID to None. If no lookup
+        value is found, set the normalization CWE ID to None.
+
+        Args:
+            cwe_id: A CWE identifier used for the lookup.
+
+        Returns:
+            A CWE identifier of the normalized value to use in place of cwe_id, or None
+                if no new ID was found.
+        """
+        for [source_id, normalized_value] in self.raw_normalization_data:
+            if source_id == cwe_id:
+                # Cast the normalized value column as an integer and return
+                try:
+                    if (
+                        normalized_value != "Other"
+                        and normalized_value != cwe_id.__str__()
+                    ):
+                        normalized_id = int(normalized_value)
+
+                        logger.debug(
+                            f"CWE ID {cwe_id} matched normalization ID "
+                            f"{normalized_id}."
+                        )
+
+                        return normalized_id
+                except ValueError:
+                    logger.warning(
+                        "Caught ValueError. "
+                        "CWE ID found, but normalized value is not a usable ID."
+                    )
+
+        # The whole file was searched without error. Notify the user that no
+        # match was found.
+        logger.debug(f"CWE ID {cwe_id} does not normalize to a new ID.")
 
         # If still here, then no value was found or an error was encountered.
         # Return nothing found
@@ -313,6 +369,46 @@ class Cvss31Calculator:
 
         # Update internal cwe table using new vulnerability data
         self.build_cwe_table()
+
+        return None
+
+    def set_normalization_data(self, normalization_data: list[list]) -> None:
+        """Validate then assign a new source of normalization mappings from memory.
+
+        Evaluate whether the input normalization data is a paired list of integers
+        representing valid CWE identifiers (CWE IDs), and the normalized value to
+        remap to. If so, load this normalization_data into the class instance.
+        Otherwise, raise TypeError.
+
+        Note that the proposed normalized value is not required to be a valid CWE ID,
+        or unique from the original CWE ID. A value of 'Other' indicates that there is
+        no appropriate higher-abstraction CWE ID to normalize to that might be more
+        commonly found within NVD. A matching CWE ID in the second column represents
+        that the requested CWE ID is already the most appropriate value to use. All
+        other values should raise a TypeError.
+
+        Args:
+            normalization_data: A list of normalization pair values (original,remap)
+                records to load into this class instance.
+
+        Returns:
+            None
+
+        Raises:
+            TypeError: The normalization_data provided was not a paired list of valid
+                CWE Identifier and a potential mapping value.
+        """
+
+        if not isinstance(normalization_data, list) or not all(
+            self.__cwe_id_valid(cwe_id) and any([remap.isdigit(), remap == "Other"])
+            for [cwe_id, remap] in normalization_data
+        ):
+            raise TypeError(
+                "Normalization data is not in the correct format. "
+                "Expected list[int, str]"
+            )
+
+        self.raw_normalization_data = normalization_data
 
         return None
 

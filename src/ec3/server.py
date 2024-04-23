@@ -13,6 +13,7 @@
 import argparse
 import logging
 import pathlib
+import typing
 
 import uvicorn
 from fastapi import FastAPI
@@ -97,6 +98,7 @@ def instantiate_ec3_service(data_file_str: str, normalize_file_str: str) -> Fast
     # Define Response Model
 
     # Configure calculator endpoint
+    @typing.no_type_check
     @app.get("/score/{cwe_id}", summary="Score a CWE", response_model=schemas.CweScore)
     def score_cwe(
         cwe_id: int,

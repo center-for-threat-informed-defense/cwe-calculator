@@ -1,26 +1,26 @@
 # """
 # The Environmental CWE CVSS Calculator (ec3) Server is used to calculate potential CVSS
-# scores for provided CWE Identifiers. Data from the National Vulnerability
-# Database(NVD) is pulled via the 2.0 API and stored for later re-use.
+# scores for provided CWE Identifiers.
 #
-# This is the command line interface entry point for ec3. When called, it obtains the
-# arguments from the command line and initializes the collector and calculator classes.
-# When completed, it prints any results found.
+# This is the command line interface entry point for ec3.server. When called, it obtains
+# the arguments from the command line and initializes the server.
 #
 # Copyright (c) 2024 The MITRE Corporation. All rights reserved.
 # """
 
 import argparse
 import logging
+import logging.config
 import pathlib
 import typing
 
 import uvicorn
 from fastapi import FastAPI
+from fastapi.concurrency import asynccontextmanager
 
-import ec3.schemas as schemas
-from ec3.calculator import Cvss31Calculator
-from ec3.logging import setup_logging
+import ec3.server.schemas as schemas
+from ec3.server.broker import Cvss31CalculatorBroker
+from ec3.server.config import LOGGING_CONFIG, UVICORN_LOGGING_CONFIG
 
 
 def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
@@ -46,14 +46,14 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     parser.add_argument(
         "--data-file",
         "-d",
-        help="Path to the CVE data pickle file to parse",
+        help="Path to the CVE data file to parse and monitor.",
         action="store",
         type=pathlib.Path,
     )
     parser.add_argument(
         "--normalize-file",
         "-n",
-        help="Path to the normalization CSV file to parse",
+        help="Path to the normalization CSV file to parse and monitor.",
         action="store",
         type=pathlib.Path,
     )
@@ -80,6 +80,19 @@ def instantiate_ec3_service(data_file_str: str, normalize_file_str: str) -> Fast
         A FastAPI application instance configured with the EC3 service.
     """
 
+    # Initialize Calculator Broker
+    calculator_broker = Cvss31CalculatorBroker()
+
+    # This function defines FastAPI's lifespan. All logic before `yield` runs before
+    # the server is started. All logic after `yield` runs before the server is shutdown.
+    @asynccontextmanager
+    async def lifespan(api: FastAPI):
+        # Start calculator broker
+        calculator_broker.start(data_file_str, normalize_file_str)
+        yield
+        # Stop calculator broker
+        calculator_broker.stop()
+
     # Initialize FastAPI instance
     app = FastAPI(
         title="Environmental CWE CVSS Calculator (ec3) Server",
@@ -91,17 +104,15 @@ def instantiate_ec3_service(data_file_str: str, normalize_file_str: str) -> Fast
             "name": "Apache 2.0",
             "url": "https://www.apache.org/licenses/LICENSE-2.0.html",
         },
+        lifespan=lifespan,
     )
-
-    # tags_metadata = [{"name": "score", "descriptions": "CWE scoring operations."}]
-
-    # Define Response Model
 
     # Configure calculator endpoint
     @typing.no_type_check
     @app.get("/score/{cwe_id}", summary="Score a CWE", response_model=schemas.CweScore)
     def score_cwe(
         cwe_id: int,
+        normalize: bool,
         exploit_code_maturity: schemas.ExploitCodeMaturity = None,
         remediation_level: schemas.RemediationLevel = None,
         report_confidence: schemas.ReportConfidence = None,
@@ -140,13 +151,8 @@ def instantiate_ec3_service(data_file_str: str, normalize_file_str: str) -> Fast
         * Modified Availability (modified_availability)
         """
 
-        # Initialize the calculator class instance. This calculator is used to load/save
-        # vulnerability data, modify temporal and environmental metrics, and obtain
-        # results for desired CWE IDs.
-        ec3_calculator = Cvss31Calculator(
-            data_file_str=data_file_str,
-            normalization_file_str=normalize_file_str,
-        )
+        # Initialize the calculator class instance.
+        ec3_calculator = calculator_broker.request_calculator()
 
         # If temporal or environmental flags were provided by the user, then update the
         # calculator with them and rebuild the data table. Note that if an individual
@@ -169,16 +175,8 @@ def instantiate_ec3_service(data_file_str: str, normalize_file_str: str) -> Fast
             ma=modified_availability or "X",
         )
 
-        # If a normalization file was provided, assume CWE ID normalization is desired.
-        normalize_ids: bool = False
-        if normalize_file_str:
-            normalize_ids = True
-
-        # Results will be calculated for a normalized CWE ID if present. Otherwise, the
-        # default initialized CWE ID. Non-normalized results can be obtained by
-        # calling ec3_calculator.calculate_results(args.cwe)
-        # or ec3_calculator.calculate_results(args.cwe, False)
-        return ec3_calculator.calculate_results(cwe_id, normalize=normalize_ids)
+        # Calculate and return results
+        return ec3_calculator.calculate_results(cwe_id, normalize)
 
     return app
 
@@ -197,7 +195,8 @@ def main(arg_list: list[str] | None = None) -> None:
     # Parse CLI arguments
     args = parse_args(arg_list)
 
-    setup_logging("ec3.server.log", args.verbose)
+    logging.config.dictConfig(LOGGING_CONFIG)
+    logging.getLogger().setLevel(logging.DEBUG if args.verbose else logging.INFO)
     logger = logging.getLogger(__name__)
 
     print()  # Print blank line to stdout
@@ -206,7 +205,10 @@ def main(arg_list: list[str] | None = None) -> None:
     logger.debug(f"Input arguments: {args}")
 
     # Start Uvicorn ASGI web server
-    uvicorn.run(instantiate_ec3_service(args.data_file, args.normalize_file))
+    uvicorn.run(
+        app=instantiate_ec3_service(args.data_file, args.normalize_file),
+        log_config=UVICORN_LOGGING_CONFIG,
+    )
 
 
 if __name__ == "__main__":  # pragma: no cover
@@ -215,5 +217,4 @@ if __name__ == "__main__":  # pragma: no cover
     The __main__ section logic check is in place for when ec3 will be executed
     directly as a script.
     """
-
     main()

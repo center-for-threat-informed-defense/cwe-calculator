@@ -333,6 +333,26 @@ class Cvss31Calculator:
 
         return None
 
+    @staticmethod
+    def parse_normalization_file(file_str: str | None = None):
+        """Parse the normalization data CSV file.
+
+        Attempts to load a list of normalized CWE IDs.
+
+        Args:
+            file_str: A string representing the normalization file path to load.
+
+        Returns:
+            A list of normalized CWE IDs if the file is available and accessible.
+        """
+        new_normalization_data: list[list] = []
+        if file_str is not None:
+            with open(file_str, mode="r") as normalization_fh:
+                normalization_file = csv.reader(normalization_fh)
+                for lines in normalization_file:
+                    new_normalization_data.append([int(lines[0]), lines[1]])
+        return new_normalization_data
+
     def load_normalization_file(
         self, normalization_file_str: str | None = None
     ) -> None:
@@ -361,13 +381,10 @@ class Cvss31Calculator:
             )
             normalization_file_str = normalization_default_file
 
-        new_normalization_data: list[list] = []
         try:
-            with open(normalization_file_str, mode="r") as normalization_fh:
-                normalization_file = csv.reader(normalization_fh)
-                for lines in normalization_file:
-                    new_normalization_data.append([int(lines[0]), lines[1]])
-
+            new_normalization_data: list[list] = self.parse_normalization_file(
+                file_str=normalization_file_str
+            )
             self.set_normalization_data(new_normalization_data)
         except TypeError:
             logger.warning(

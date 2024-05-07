@@ -77,29 +77,27 @@ def example_cve_data() -> list[nvd_classes.CVE]:
 
 @pytest.fixture
 def example_vulnerability_file(example_cve_data) -> Generator[str, Any, None]:
+    data_file = NamedTemporaryFile(dir="./tests", delete=False)
     # Create temporary data file
-    with NamedTemporaryFile(
-        dir="./tests", delete=True, delete_on_close=False
-    ) as data_file:
-        pickle.dump(example_cve_data, data_file, pickle.HIGHEST_PROTOCOL)
-        data_file.flush()
-        data_file.close()
-        # Return temporary data file
-        yield data_file.name
-        # Destroy temporary data file
+    pickle.dump(example_cve_data, data_file, pickle.HIGHEST_PROTOCOL)
+    data_file.flush()
+    data_file.close()
+    # Return temporary data file
+    yield data_file.name
+    # Destroy temporary data file
+    os.remove(data_file.name)
 
 
 @pytest.fixture
 def example_normalization_file() -> Generator[str, Any, None]:
+    norm_file = NamedTemporaryFile(dir="./tests", delete=False)
     # Create temporary data file
-    with NamedTemporaryFile(
-        dir="./tests", delete=True, delete_on_close=False
-    ) as norm_file:
-        norm_file.write(b"121,300")
-        norm_file.close()
-        # Return temporary data file
-        yield norm_file.name
-        # Destroy temporary data file
+    norm_file.write(b"121,300")
+    norm_file.close()
+    # Return temporary data file
+    yield norm_file.name
+    # Destroy temporary data file
+    os.remove(norm_file.name)
 
 
 @pytest.fixture

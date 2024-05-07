@@ -164,7 +164,7 @@ class Cvss31CalculatorBroker(FileSystemEventHandler):
         Returns:
             Cvss31Calculator: A newly configured Cvss31Calculator.
         """
-        calculator = Cvss31Calculator(support_defaults=True)
+        calculator = Cvss31Calculator(support_defaults=False)
         with self.__data_lock:
             calculator.set_normalization_data(self.__normalization_data)
             calculator.set_vulnerability_data(self.__vulnerability_data)

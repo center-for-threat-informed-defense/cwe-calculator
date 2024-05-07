@@ -112,7 +112,7 @@ def instantiate_ec3_service(data_file_str: str, normalize_file_str: str) -> Fast
     @app.get("/score/{cwe_id}", summary="Score a CWE", response_model=schemas.CweScore)
     def score_cwe(
         cwe_id: int,
-        normalize: bool,
+        normalize: bool = False,
         exploit_code_maturity: schemas.ExploitCodeMaturity = None,
         remediation_level: schemas.RemediationLevel = None,
         report_confidence: schemas.ReportConfidence = None,

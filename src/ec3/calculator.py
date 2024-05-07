@@ -15,6 +15,7 @@ Copyright (c) 2024 The MITRE Corporation. All rights reserved.
 import collections
 import csv
 import io
+import json
 import logging
 import pickle
 import statistics
@@ -93,9 +94,9 @@ class Cvss31Calculator:
         # Optionally load vulnerability data from the provided data file, or default
         # data file (if support_defaults is True)
         if data_file_str:
-            self.load_data_file(data_file_str)
+            self.load_data_file(data_file_str.__str__())
         elif support_defaults:
-            self.load_data_file(data_default_file)
+            self.load_data_file(data_default_file.__str__())
 
         # Optionally load normalization data from the provided CSV file, or default
         # CSV file (if support_defaults is True)
@@ -203,6 +204,53 @@ class Cvss31Calculator:
             else []
         )
 
+    @staticmethod
+    def load_json(file_str: str) -> list[nvd_classes.CVE]:
+        """Read and convert NVD JSON data to a list of nvd_classes.CVE objects.
+
+        Args:
+            file_str: A string representing the data file path to load.
+
+        Returns:
+            A list of nvdlib.classes.CVE objects if the JSON file is available,
+                accessible, and parseable. Returns an empty list otherwise.
+        """
+
+        if not file_str:
+            logger.debug("No JSON file provided.")
+            return []
+
+        try:
+            loaded_data: list[nvd_classes.CVE] = []
+            with open(file_str) as fh:
+                json_loaded: dict = json.load(fh)
+
+            if "vulnerabilities" not in json_loaded:
+                print("Loaded JSON data does not contain any vulnerabilities.")
+                return []
+
+            for vuln in json_loaded["vulnerabilities"]:
+                try:
+                    if "cve" in vuln:
+                        cve_record: nvd_classes.CVE = json.loads(
+                            json.dumps(vuln["cve"]), object_hook=nvd_classes.CVE
+                        )
+                        cve_record.getvars()
+
+                        loaded_data.append(cve_record)
+                except AttributeError:
+                    # Some records do not contain CVSS metrics.
+                    continue
+
+            return loaded_data
+
+        except FileNotFoundError:
+            logger.warning("Caught FileNotFoundError. Input JSON file not found.")
+        except PermissionError:
+            logger.warning("Caught PermissionError. Unable to read JSON data file.")
+
+        return []
+
     def load_data_file(self, data_file_str: str | None = None) -> None:
         """Load a previously saved pickle file containing NVD vulnerability data.
 
@@ -229,9 +277,15 @@ class Cvss31Calculator:
             data_file_str = data_default_file
 
         try:
-            loaded_data: list[nvd_classes.CVE] = self.restricted_load(
-                file_str=data_file_str
-            )
+            loaded_data: list[nvd_classes.CVE] = []
+
+            if data_file_str.lower().endswith("json"):
+                print("Found JSON file.")
+                loaded_data = self.load_json(file_str=data_file_str)
+            else:
+                print("default pickle file.")
+                loaded_data = self.restricted_load(file_str=data_file_str)
+
             self.set_vulnerability_data(new_data=loaded_data)
         except FileNotFoundError:
             logger.warning("Caught FileNotFoundError. Input file not found.")

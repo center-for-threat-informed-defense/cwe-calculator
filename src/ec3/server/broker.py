@@ -9,6 +9,7 @@ Typical usage example:
 Copyright (c) 2024 The MITRE Corporation. All rights reserved.
 """
 
+import json
 import logging
 import os
 import pickle
@@ -83,8 +84,8 @@ class Cvss31CalculatorBroker(FileSystemEventHandler):
         self.__service_lock = RLock()
         self.__observer = Observer()
         self.__event_handler = ModifiedCalculatorDataHandler(self)
-        self.__data_file_str: str = data_default_file
-        self.__normalization_file_str: str = normalization_default_file
+        self.__data_file_str: str = str(data_default_file)
+        self.__normalization_file_str: str = str(normalization_default_file)
         self.__vulnerability_data: list[nvd_classes.CVE] = []
         self.__normalization_data: list[list] = []
         self.__is_running = False
@@ -113,9 +114,9 @@ class Cvss31CalculatorBroker(FileSystemEventHandler):
 
             # Configure vulnerability and normalization file
             if data_file_str is not None:
-                self.__data_file_str = data_file_str
+                self.__data_file_str = str(data_file_str)
             if normalization_file_str is not None:
-                self.__normalization_file_str = normalization_file_str
+                self.__normalization_file_str = str(normalization_file_str)
 
             logger.info("Starting Cvss31 Calculator Broker...")
 
@@ -180,9 +181,14 @@ class Cvss31CalculatorBroker(FileSystemEventHandler):
         logging.debug("Updating vulnerability data...")
         try:
             with self.__data_lock:
-                self.__vulnerability_data = Cvss31Calculator.restricted_load(
-                    self.__data_file_str
-                )
+                if self.__data_file_str.lower().endswith("json"):
+                    self.__vulnerability_data = Cvss31Calculator.load_json(
+                        file_str=self.__data_file_str
+                    )
+                else:
+                    self.__vulnerability_data = Cvss31Calculator.restricted_load(
+                        file_str=self.__data_file_str
+                    )
                 logger.info(f"Vulnerability data updated. [{self.__data_file_str}]")
         except FileNotFoundError:
             logger.error(
@@ -200,6 +206,12 @@ class Cvss31CalculatorBroker(FileSystemEventHandler):
             logger.error(
                 "Failed to update vulnerability data. "
                 "Data file uses an invalid pickle format."
+                f"({ self.__data_file_str })"
+            )
+        except json.decoder.JSONDecodeError as err:
+            logger.error(
+                "Failed to update vulnerability data. "
+                f"Invalid JSON: {str(err)}. "
                 f"({ self.__data_file_str })"
             )
 

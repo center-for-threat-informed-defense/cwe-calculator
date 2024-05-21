@@ -1,3 +1,4 @@
+import json
 import os
 import pickle
 from tempfile import NamedTemporaryFile
@@ -194,6 +195,24 @@ def test_broker_start_with_vuln_unpickling_error(
     assert (
         "Failed to update vulnerability data. Data file uses an invalid pickle format."
     ) in caplog.text
+    example_broker.stop()
+
+
+@patch.object(Cvss31Calculator, "load_json")
+def test_broker_start_with_vuln_lookup_error(mock_decode, example_broker, caplog):
+    mock_decode.side_effect = LookupError
+    example_broker.start("/fake/file.json")
+    assert (
+        "Failed to update vulnerability data. Data file lists no vulnerabilities."
+    ) in caplog.text
+    example_broker.stop()
+
+
+@patch.object(Cvss31Calculator, "load_json")
+def test_broker_start_with_vuln_decode_error(mock_decode, example_broker, caplog):
+    mock_decode.side_effect = json.JSONDecodeError("Bad JSON.", "", 0)
+    example_broker.start("/fake/file.json")
+    assert ("Failed to update vulnerability data. Invalid JSON:") in caplog.text
     example_broker.stop()
 
 

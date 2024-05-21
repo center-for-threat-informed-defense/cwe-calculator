@@ -15,6 +15,7 @@ Copyright (c) 2024 The MITRE Corporation. All rights reserved.
 import collections
 import csv
 import io
+import json
 import logging
 import pickle
 import statistics
@@ -93,9 +94,9 @@ class Cvss31Calculator:
         # Optionally load vulnerability data from the provided data file, or default
         # data file (if support_defaults is True)
         if data_file_str:
-            self.load_data_file(data_file_str)
+            self.load_data_file(data_file_str.__str__())
         elif support_defaults:
-            self.load_data_file(data_default_file)
+            self.load_data_file(data_default_file.__str__())
 
         # Optionally load normalization data from the provided CSV file, or default
         # CSV file (if support_defaults is True)
@@ -203,16 +204,105 @@ class Cvss31Calculator:
             else []
         )
 
-    def load_data_file(self, data_file_str: str | None = None) -> None:
-        """Load a previously saved pickle file containing NVD vulnerability data.
-
-        Loads vulnerability data into a list containing nvdlib.classes.CVE objects. If
-        unable to load data from the specified or default data file, assigns the
-        internal list to be empty. Calling this function will potentially replace
-        previously loaded data in memory.
+    @staticmethod
+    def load_json(file_str: str | None) -> list[nvd_classes.CVE]:
+        """Read and convert NVD JSON data to a list of nvd_classes.CVE objects.
 
         Args:
-            data_file_str: String containing the path to a pickle file containing
+            file_str: A string representing the data file path to load.
+
+        Returns:
+            A list of nvdlib.classes.CVE objects if the JSON file is available,
+                accessible, and parseable. Returns an empty list otherwise.
+        """
+
+        if not file_str:
+            return []
+
+        with open(file_str) as fh:
+            json_loaded: dict = json.load(fh)
+
+            if "vulnerabilities" not in json_loaded:
+                raise LookupError("Provided file contains no vulnerabilities.")
+
+            loaded_data: list[nvd_classes.CVE] = []
+            for vuln in json_loaded["vulnerabilities"]:
+                try:
+                    if "cve" in vuln:
+                        # Load JSON into CVE object
+                        cve_record: nvd_classes.CVE = json.loads(
+                            json.dumps(vuln["cve"]), object_hook=nvd_classes.CVE
+                        )
+                        cve_record.getvars()
+
+                        # Add CVE object to results
+                        loaded_data.append(cve_record)
+
+                except AttributeError:
+                    # Some records do not contain CVSS metrics.
+                    continue
+
+            return loaded_data
+
+    def parse_vulnerability_file(
+        self, data_file_str: str | None = None
+    ) -> list[nvd_classes.CVE]:
+        """Parse a previously saved pickle/JSON file containing NVD vulnerability data.
+
+        Determines the file type based on extension, then loads vulnerability data
+        into a list containing nvdlib.classes.CVE objects. If unable to load data from
+        the specified or default data file, assigns the returned list to be empty.
+
+        Args:
+            data_file_str: String containing the path to a pickle/JSON file containing
+                nvdlib.classes.CVE data.
+
+        Returns:
+            A list of nvdlib.classes.CVE objects if the JSON file is available,
+                accessible, and parseable. Returns an empty list otherwise.
+        """
+
+        logger.debug("Parsing file format.")
+
+        if data_file_str is None:
+            logger.debug(
+                f"No data file provided, "
+                f"setting to default file: {data_default_file}"
+            )
+            data_file_str = data_default_file
+
+        loaded_data: list[nvd_classes.CVE] = []
+
+        try:
+            if data_file_str.lower().endswith("json"):
+                logger.debug("Loading as a JSON file.")
+                loaded_data = self.load_json(file_str=data_file_str)
+            else:
+                logger.debug("Loading as a pickle file.")
+                loaded_data = self.restricted_load(file_str=data_file_str)
+
+        except FileNotFoundError:
+            logger.warning("Caught FileNotFoundError. Input file not found.")
+        except PermissionError:
+            logger.warning("Caught PermissionError. Unable to read data file.")
+        except LookupError:
+            logger.warning("Caught LookupError. Input file lists no vulnerabilities.")
+        except json.JSONDecodeError:
+            logger.warning("Caught JSONDecodeError. Input file not a valid JSON file.")
+        except pickle.UnpicklingError:
+            logger.warning(
+                "Caught UnpicklingError. Input file not in correct pickle format."
+            )
+
+        return loaded_data
+
+    def load_data_file(self, data_file_str: str | None = None) -> None:
+        """Load NVD vulnerability data from a file into memory for this instance.
+
+        Calling this function will potentially replace previously loaded data in memory.
+
+        Args:
+            data_file_str: String containing the path to a pickle/JSON file containing
                 nvdlib.classes.CVE data.
 
         Returns:
@@ -229,17 +319,16 @@ class Cvss31Calculator:
             data_file_str = data_default_file
 
         try:
-            loaded_data: list[nvd_classes.CVE] = self.restricted_load(
-                file_str=data_file_str
+            loaded_data: list[nvd_classes.CVE] = self.parse_vulnerability_file(
+                data_file_str
             )
+
             self.set_vulnerability_data(new_data=loaded_data)
-        except FileNotFoundError:
-            logger.warning("Caught FileNotFoundError. Input file not found.")
-        except PermissionError:
-            logger.warning("Caught PermissionError. Unable to read data file.")
-        except pickle.UnpicklingError:
+
+        except TypeError:
             logger.warning(
-                "Caught UnpicklingError. Input file not in correct pickle format."
+                "Caught TypeError. Vulnerability data is not in the correct format. "
+                "Expected list[nvdlib.classes.CVE]"
             )
 
         return None

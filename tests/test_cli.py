@@ -1,8 +1,7 @@
-import pytest
-
+import ec3.calculator
 import ec3.cli
 import ec3.collector
-import ec3.calculator
+import pytest
 from mock import patch
 from nvdlib import classes as nvd_classes
 

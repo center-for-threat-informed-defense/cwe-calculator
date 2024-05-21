@@ -202,6 +202,12 @@ class Cvss31CalculatorBroker(FileSystemEventHandler):
                 "Insufficient permissions to access data file."
                 f"({ self.__data_file_str })"
             )
+        except LookupError:
+            logger.error(
+                "Failed to update vulnerability data. "
+                "Data file lists no vulnerabilities."
+                f"({ self.__data_file_str })"
+            )
         except pickle.UnpicklingError:
             logger.error(
                 "Failed to update vulnerability data. "

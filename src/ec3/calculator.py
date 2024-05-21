@@ -229,7 +229,6 @@ class Cvss31Calculator:
             for vuln in json_loaded["vulnerabilities"]:
                 try:
                     if "cve" in vuln:
-
                         # Load JSON into CVE object
                         cve_record: nvd_classes.CVE = json.loads(
                             json.dumps(vuln["cve"]), object_hook=nvd_classes.CVE
@@ -275,7 +274,6 @@ class Cvss31Calculator:
         loaded_data: list[nvd_classes.CVE] = []
 
         try:
-
             if data_file_str.lower().endswith("json"):
                 logger.debug("Loading as a JSON file.")
                 loaded_data = self.load_json(file_str=data_file_str)

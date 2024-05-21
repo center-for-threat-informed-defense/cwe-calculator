@@ -205,7 +205,7 @@ class Cvss31Calculator:
         )
 
     @staticmethod
-    def load_json(file_str: str) -> list[nvd_classes.CVE]:
+    def load_json(file_str: str | None) -> list[nvd_classes.CVE]:
         """Read and convert NVD JSON data to a list of nvd_classes.CVE objects.
 
         Args:
@@ -217,39 +217,33 @@ class Cvss31Calculator:
         """
 
         if not file_str:
-            logger.debug("No JSON file provided.")
             return []
 
-        try:
-            loaded_data: list[nvd_classes.CVE] = []
-            with open(file_str) as fh:
-                json_loaded: dict = json.load(fh)
+        with open(file_str) as fh:
+            json_loaded: dict = json.load(fh)
 
             if "vulnerabilities" not in json_loaded:
-                logger.debug("Loaded JSON data does not contain any vulnerabilities.")
-                return []
+                raise LookupError("Provided file contains no vulnerabilities.")
 
+            loaded_data: list[nvd_classes.CVE] = []
             for vuln in json_loaded["vulnerabilities"]:
                 try:
                     if "cve" in vuln:
+
+                        # Load JSON into CVE object
                         cve_record: nvd_classes.CVE = json.loads(
                             json.dumps(vuln["cve"]), object_hook=nvd_classes.CVE
                         )
                         cve_record.getvars()
 
+                        # Add CVE object to results
                         loaded_data.append(cve_record)
+
                 except AttributeError:
                     # Some records do not contain CVSS metrics.
                     continue
 
             return loaded_data
-
-        except FileNotFoundError:
-            logger.warning("Caught FileNotFoundError. Input JSON file not found.")
-        except PermissionError:
-            logger.warning("Caught PermissionError. Unable to read JSON data file.")
-
-        return []
 
     def parse_vulnerability_file(
         self, data_file_str: str | None = None
@@ -293,6 +287,10 @@ class Cvss31Calculator:
             logger.warning("Caught FileNotFoundError. Input file not found.")
         except PermissionError:
             logger.warning("Caught PermissionError. Unable to read data file.")
+        except LookupError:
+            logger.warning("Caught LookupError. Input file lists no vulnerabilities.")
+        except json.JSONDecodeError:
+            logger.warning("Caught JSONDecodeError. Input file not a valid JSON file.")
         except pickle.UnpicklingError:
             logger.warning(
                 "Caught UnpicklingError. Input file not in correct pickle format."

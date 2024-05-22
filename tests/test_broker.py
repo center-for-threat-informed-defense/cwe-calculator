@@ -9,8 +9,9 @@ from ec3.server.broker import Cvss31CalculatorBroker, ModifiedCalculatorDataHand
 from mock import mock_open, patch
 from nvdlib import classes as nvd_classes
 from watchdog.events import FileSystemEvent
+from watchdog.observers import Observer
 
-MOCK_VULN_PKLE = "/fake/vuln/file.pickle"
+MOCK_VULN_PICKLE = "/fake/vuln/file.pickle"
 MOCK_VULN_JSON = "/fake/vuln/file.json"
 MOCK_NORM_FILE = "/fake/norm/file.csv"
 BUILTIN_OPEN = open
@@ -97,7 +98,7 @@ def setup_mock_files(monkeypatch, example_cve_data):
         return BUILTIN_OPEN(*args, **kwargs)
 
     def mock_samefile(*args, **kwargs):
-        if args[0] == args[1] == MOCK_VULN_PKLE:
+        if args[0] == args[1] == MOCK_VULN_PICKLE:
             return True
         if args[0] == args[1] == MOCK_VULN_JSON:
             return True
@@ -114,12 +115,18 @@ def setup_mock_files(monkeypatch, example_cve_data):
 
 
 @pytest.fixture
+def setup_mock_observer(monkeypatch):
+    monkeypatch.setattr(Observer, "start", lambda *args: None)
+    monkeypatch.setattr(Observer, "stop", lambda *args: None)
+
+
+@pytest.fixture
 def example_modified_data_handler(setup_mock_files) -> ModifiedCalculatorDataHandler:
-    broker = Cvss31CalculatorBroker(MOCK_VULN_PKLE, MOCK_NORM_FILE)
+    broker = Cvss31CalculatorBroker(MOCK_VULN_PICKLE, MOCK_NORM_FILE)
     return ModifiedCalculatorDataHandler(broker)
 
 
-def test_broker_is_running(example_broker: Cvss31CalculatorBroker):
+def test_broker_is_running(setup_mock_observer, example_broker: Cvss31CalculatorBroker):
     example_broker.start()
     assert example_broker.is_running
     example_broker.stop()
@@ -128,9 +135,10 @@ def test_broker_is_running(example_broker: Cvss31CalculatorBroker):
 
 def test_broker_start_with_files_in_same_directory(
     setup_mock_files,
+    setup_mock_observer,
     example_broker: Cvss31CalculatorBroker,
 ):
-    example_broker.start(MOCK_VULN_PKLE, MOCK_NORM_FILE)
+    example_broker.start(MOCK_VULN_PICKLE, MOCK_NORM_FILE)
     calc = example_broker.request_calculator()
     resp = calc.calculate_results(121, True)
     assert resp["projected_cvss"] == 0
@@ -144,9 +152,9 @@ def test_broker_start_with_files_in_same_directory(
 
 
 def test_broker_start_with_files_in_separate_directories(
-    setup_mock_files, example_broker: Cvss31CalculatorBroker
+    setup_mock_files, setup_mock_observer, example_broker: Cvss31CalculatorBroker
 ):
-    example_broker.start(MOCK_VULN_PKLE)
+    example_broker.start(MOCK_VULN_PICKLE)
     calc = example_broker.request_calculator()
     resp = calc.calculate_results(121)
     records = set(resp["cve_records"])
@@ -165,7 +173,7 @@ def test_broker_start_with_files_in_separate_directories(
 
 @patch.object(Cvss31Calculator, "restricted_load")
 def test_broker_start_with_vuln_file_not_found_error(
-    mock_restricted_load, example_broker, caplog
+    mock_restricted_load, setup_mock_observer, example_broker, caplog
 ):
     mock_restricted_load.side_effect = FileNotFoundError
     example_broker.start()
@@ -177,7 +185,7 @@ def test_broker_start_with_vuln_file_not_found_error(
 
 @patch.object(Cvss31Calculator, "restricted_load")
 def test_broker_start_with_vuln_permissions_error(
-    mock_restricted_load, example_broker, caplog
+    mock_restricted_load, setup_mock_observer, example_broker, caplog
 ):
     mock_restricted_load.side_effect = PermissionError
     example_broker.start()
@@ -190,7 +198,7 @@ def test_broker_start_with_vuln_permissions_error(
 
 @patch.object(Cvss31Calculator, "restricted_load")
 def test_broker_start_with_vuln_unpickling_error(
-    mock_restricted_load, example_broker, caplog
+    mock_restricted_load, setup_mock_observer, example_broker, caplog
 ):
     mock_restricted_load.side_effect = pickle.UnpicklingError
     example_broker.start()
@@ -201,7 +209,9 @@ def test_broker_start_with_vuln_unpickling_error(
 
 
 @patch.object(Cvss31Calculator, "load_json")
-def test_broker_start_with_vuln_lookup_error(mock_decode, example_broker, caplog):
+def test_broker_start_with_vuln_lookup_error(
+    mock_decode, setup_mock_observer, example_broker, caplog
+):
     mock_decode.side_effect = LookupError
     example_broker.start(MOCK_VULN_JSON)
     assert (
@@ -211,7 +221,9 @@ def test_broker_start_with_vuln_lookup_error(mock_decode, example_broker, caplog
 
 
 @patch.object(Cvss31Calculator, "load_json")
-def test_broker_start_with_vuln_decode_error(mock_decode, example_broker, caplog):
+def test_broker_start_with_vuln_decode_error(
+    mock_decode, setup_mock_observer, example_broker, caplog
+):
     mock_decode.side_effect = json.JSONDecodeError("Bad JSON.", "", 0)
     example_broker.start(MOCK_VULN_JSON)
     assert ("Failed to update vulnerability data. Invalid JSON:") in caplog.text
@@ -220,7 +232,7 @@ def test_broker_start_with_vuln_decode_error(mock_decode, example_broker, caplog
 
 @patch.object(Cvss31Calculator, "parse_normalization_file")
 def test_broker_start_with_norm_file_not_found_error(
-    mock_parse_file, example_broker, caplog
+    mock_parse_file, setup_mock_observer, example_broker, caplog
 ):
     mock_parse_file.side_effect = FileNotFoundError
     example_broker.start()
@@ -232,7 +244,7 @@ def test_broker_start_with_norm_file_not_found_error(
 
 @patch.object(Cvss31Calculator, "parse_normalization_file")
 def test_broker_start_with_norm_permissions_error(
-    mock_parse_file, example_broker, caplog
+    mock_parse_file, setup_mock_observer, example_broker, caplog
 ):
     mock_parse_file.side_effect = PermissionError
     example_broker.start()
@@ -244,7 +256,9 @@ def test_broker_start_with_norm_permissions_error(
 
 
 @patch.object(Cvss31Calculator, "parse_normalization_file")
-def test_broker_start_with_norm_type_error(mock_parse_file, example_broker, caplog):
+def test_broker_start_with_norm_type_error(
+    mock_parse_file, setup_mock_observer, example_broker, caplog
+):
     mock_parse_file.side_effect = TypeError
     example_broker.start()
     assert (
@@ -255,7 +269,7 @@ def test_broker_start_with_norm_type_error(mock_parse_file, example_broker, capl
 
 
 def test_modified_vuln_file_handler(setup_mock_files, example_modified_data_handler):
-    assert example_modified_data_handler.on_modified(FileSystemEvent(MOCK_VULN_PKLE))
+    assert example_modified_data_handler.on_modified(FileSystemEvent(MOCK_VULN_PICKLE))
 
 
 def test_modified_norm_file_handler(setup_mock_files, example_modified_data_handler):

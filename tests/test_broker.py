@@ -1,15 +1,19 @@
+import builtins
 import json
 import os
 import pickle
-from tempfile import NamedTemporaryFile
-from typing import Any, Generator
 
 import pytest
 from ec3.calculator import Cvss31Calculator
 from ec3.server.broker import Cvss31CalculatorBroker, ModifiedCalculatorDataHandler
-from mock import patch
+from mock import mock_open, patch
 from nvdlib import classes as nvd_classes
 from watchdog.events import FileSystemEvent
+
+MOCK_VULN_FILE = "/fake/vuln/file.pickle"
+MOCK_NORM_FILE = "/fake/norm/file.csv"
+BUILTIN_OPEN = open
+BUILTIN_SAMEFILE = os.path.samefile
 
 
 @pytest.fixture
@@ -82,37 +86,31 @@ def example_cve_data() -> list[nvd_classes.CVE]:
 
 
 @pytest.fixture
-def example_vulnerability_file(example_cve_data) -> Generator[str, Any, None]:
-    data_file = NamedTemporaryFile(dir="./tests", delete=False)
-    # Create temporary data file
-    pickle.dump(example_cve_data, data_file, pickle.HIGHEST_PROTOCOL)
-    data_file.flush()
-    data_file.close()
-    # Return temporary data file
-    yield data_file.name
-    # Destroy temporary data file
-    os.remove(data_file.name)
+def setup_mock_files(monkeypatch, example_cve_data):
+
+    def mock_open_files(*args, **kwargs):
+        if args[0] == MOCK_NORM_FILE:
+            return mock_open(read_data="121,300")(*args, **kwargs)
+        return BUILTIN_OPEN(*args, **kwargs)
+
+    def mock_samefile(*args, **kwargs):
+        if args[0] == args[1] == MOCK_VULN_FILE:
+            return True
+        if args[0] == args[1] == MOCK_NORM_FILE:
+            return True
+        return BUILTIN_SAMEFILE(*args, **kwargs)
+
+    def mock_restricted_load(*args, **kwargs):
+        return example_cve_data
+
+    monkeypatch.setattr(builtins, "open", mock_open_files)
+    monkeypatch.setattr(os.path, "samefile", mock_samefile)
+    monkeypatch.setattr(Cvss31Calculator, "restricted_load", mock_restricted_load)
 
 
 @pytest.fixture
-def example_normalization_file() -> Generator[str, Any, None]:
-    norm_file = NamedTemporaryFile(dir="./tests", delete=False)
-    # Create temporary data file
-    norm_file.write(b"121,300")
-    norm_file.close()
-    # Return temporary data file
-    yield norm_file.name
-    # Destroy temporary data file
-    os.remove(norm_file.name)
-
-
-@pytest.fixture
-def example_modified_data_handler(
-    example_vulnerability_file: str, example_normalization_file: str
-) -> ModifiedCalculatorDataHandler:
-    broker = Cvss31CalculatorBroker(
-        example_vulnerability_file, example_normalization_file
-    )
+def example_modified_data_handler(setup_mock_files) -> ModifiedCalculatorDataHandler:
+    broker = Cvss31CalculatorBroker(MOCK_VULN_FILE, MOCK_NORM_FILE)
     return ModifiedCalculatorDataHandler(broker)
 
 
@@ -124,11 +122,10 @@ def test_broker_is_running(example_broker: Cvss31CalculatorBroker):
 
 
 def test_broker_start_with_files_in_same_directory(
+    setup_mock_files,
     example_broker: Cvss31CalculatorBroker,
-    example_vulnerability_file: str,
-    example_normalization_file: str,
 ):
-    example_broker.start(example_vulnerability_file, example_normalization_file)
+    example_broker.start(MOCK_VULN_FILE, MOCK_NORM_FILE)
     calc = example_broker.request_calculator()
     resp = calc.calculate_results(121, True)
     assert resp["projected_cvss"] == 0
@@ -142,9 +139,9 @@ def test_broker_start_with_files_in_same_directory(
 
 
 def test_broker_start_with_files_in_separate_directories(
-    example_broker: Cvss31CalculatorBroker, example_vulnerability_file: str
+    setup_mock_files, example_broker: Cvss31CalculatorBroker
 ):
-    example_broker.start(example_vulnerability_file)
+    example_broker.start(MOCK_VULN_FILE)
     calc = example_broker.request_calculator()
     resp = calc.calculate_results(121)
     records = set(resp["cve_records"])
@@ -252,17 +249,15 @@ def test_broker_start_with_norm_type_error(mock_parse_file, example_broker, capl
     example_broker.stop()
 
 
-def test_modified_vuln_file_handler(
-    example_modified_data_handler, example_vulnerability_file, caplog
-):
-    assert example_modified_data_handler.on_modified(
-        FileSystemEvent(example_vulnerability_file)
-    )
+def test_modified_vuln_file_handler(setup_mock_files, example_modified_data_handler):
+    assert example_modified_data_handler.on_modified(FileSystemEvent(MOCK_VULN_FILE))
 
 
-def test_modified_norm_file_handler(
-    example_modified_data_handler, example_normalization_file, caplog
-):
-    assert example_modified_data_handler.on_modified(
-        FileSystemEvent(example_normalization_file)
+def test_modified_norm_file_handler(setup_mock_files, example_modified_data_handler):
+    assert example_modified_data_handler.on_modified(FileSystemEvent(MOCK_NORM_FILE))
+
+
+def test_modified_rand_file_handler(setup_mock_files, example_modified_data_handler):
+    assert not example_modified_data_handler.on_modified(
+        FileSystemEvent("fake/file.txt")
     )

@@ -97,8 +97,7 @@ def instantiate_ec3_service(data_file_str: str, normalize_file_str: str) -> Fast
     app = FastAPI(
         title="Environmental CWE CVSS Calculator (ec3) Server",
         summary="The Environmental CWE CVSS Calculator (ec3) is used to calculate a "
-        "potential CVSS score for a provided CWE Identifier. Data from the National "
-        "Vulnerability Database(NVD) is pulled via the 2.0 API.",
+        "potential CVSS score for a provided CWE Identifier.",
         version="1.0.0",
         license_info={
             "name": "Apache 2.0",

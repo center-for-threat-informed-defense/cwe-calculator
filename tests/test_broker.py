@@ -10,7 +10,8 @@ from mock import mock_open, patch
 from nvdlib import classes as nvd_classes
 from watchdog.events import FileSystemEvent
 
-MOCK_VULN_FILE = "/fake/vuln/file.pickle"
+MOCK_VULN_PKLE = "/fake/vuln/file.pickle"
+MOCK_VULN_JSON = "/fake/vuln/file.json"
 MOCK_NORM_FILE = "/fake/norm/file.csv"
 BUILTIN_OPEN = open
 BUILTIN_SAMEFILE = os.path.samefile
@@ -91,10 +92,14 @@ def setup_mock_files(monkeypatch, example_cve_data):
     def mock_open_files(*args, **kwargs):
         if args[0] == MOCK_NORM_FILE:
             return mock_open(read_data="121,300")(*args, **kwargs)
+        if args[0] == MOCK_VULN_JSON:
+            return mock_open(read_data="{}")(*args, **kwargs)
         return BUILTIN_OPEN(*args, **kwargs)
 
     def mock_samefile(*args, **kwargs):
-        if args[0] == args[1] == MOCK_VULN_FILE:
+        if args[0] == args[1] == MOCK_VULN_PKLE:
+            return True
+        if args[0] == args[1] == MOCK_VULN_JSON:
             return True
         if args[0] == args[1] == MOCK_NORM_FILE:
             return True
@@ -110,7 +115,7 @@ def setup_mock_files(monkeypatch, example_cve_data):
 
 @pytest.fixture
 def example_modified_data_handler(setup_mock_files) -> ModifiedCalculatorDataHandler:
-    broker = Cvss31CalculatorBroker(MOCK_VULN_FILE, MOCK_NORM_FILE)
+    broker = Cvss31CalculatorBroker(MOCK_VULN_PKLE, MOCK_NORM_FILE)
     return ModifiedCalculatorDataHandler(broker)
 
 
@@ -125,7 +130,7 @@ def test_broker_start_with_files_in_same_directory(
     setup_mock_files,
     example_broker: Cvss31CalculatorBroker,
 ):
-    example_broker.start(MOCK_VULN_FILE, MOCK_NORM_FILE)
+    example_broker.start(MOCK_VULN_PKLE, MOCK_NORM_FILE)
     calc = example_broker.request_calculator()
     resp = calc.calculate_results(121, True)
     assert resp["projected_cvss"] == 0
@@ -141,7 +146,7 @@ def test_broker_start_with_files_in_same_directory(
 def test_broker_start_with_files_in_separate_directories(
     setup_mock_files, example_broker: Cvss31CalculatorBroker
 ):
-    example_broker.start(MOCK_VULN_FILE)
+    example_broker.start(MOCK_VULN_PKLE)
     calc = example_broker.request_calculator()
     resp = calc.calculate_results(121)
     records = set(resp["cve_records"])
@@ -198,7 +203,7 @@ def test_broker_start_with_vuln_unpickling_error(
 @patch.object(Cvss31Calculator, "load_json")
 def test_broker_start_with_vuln_lookup_error(mock_decode, example_broker, caplog):
     mock_decode.side_effect = LookupError
-    example_broker.start("/fake/file.json")
+    example_broker.start(MOCK_VULN_JSON)
     assert (
         "Failed to update vulnerability data. Data file lists no vulnerabilities."
     ) in caplog.text
@@ -208,7 +213,7 @@ def test_broker_start_with_vuln_lookup_error(mock_decode, example_broker, caplog
 @patch.object(Cvss31Calculator, "load_json")
 def test_broker_start_with_vuln_decode_error(mock_decode, example_broker, caplog):
     mock_decode.side_effect = json.JSONDecodeError("Bad JSON.", "", 0)
-    example_broker.start("/fake/file.json")
+    example_broker.start(MOCK_VULN_JSON)
     assert ("Failed to update vulnerability data. Invalid JSON:") in caplog.text
     example_broker.stop()
 
@@ -250,7 +255,7 @@ def test_broker_start_with_norm_type_error(mock_parse_file, example_broker, capl
 
 
 def test_modified_vuln_file_handler(setup_mock_files, example_modified_data_handler):
-    assert example_modified_data_handler.on_modified(FileSystemEvent(MOCK_VULN_FILE))
+    assert example_modified_data_handler.on_modified(FileSystemEvent(MOCK_VULN_PKLE))
 
 
 def test_modified_norm_file_handler(setup_mock_files, example_modified_data_handler):
@@ -259,5 +264,5 @@ def test_modified_norm_file_handler(setup_mock_files, example_modified_data_hand
 
 def test_modified_rand_file_handler(setup_mock_files, example_modified_data_handler):
     assert not example_modified_data_handler.on_modified(
-        FileSystemEvent("fake/file.txt")
+        FileSystemEvent(MOCK_VULN_JSON)
     )

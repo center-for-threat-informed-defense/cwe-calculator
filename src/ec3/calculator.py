@@ -334,7 +334,7 @@ class Cvss31Calculator:
         return None
 
     @staticmethod
-    def parse_normalization_file(file_str: str | None = None):
+    def parse_normalization_file(file_str: str | None = None) -> list[list]:
         """Parse the normalization data CSV file.
 
         Attempts to load a list of normalized CWE IDs.

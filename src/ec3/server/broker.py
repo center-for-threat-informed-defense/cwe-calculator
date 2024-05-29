@@ -5,8 +5,6 @@ Typical usage example:
     broker.start()
     calculator = broker.request_calculator()
     broker.stop()
-
-Copyright (c) 2024 The MITRE Corporation. All rights reserved.
 """
 
 import json

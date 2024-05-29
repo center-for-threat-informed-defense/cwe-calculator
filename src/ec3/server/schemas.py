@@ -1,8 +1,6 @@
 """Utility classes used to configure the REST Server's API schema.
 
 Utility classes define the input and output schemas for each REST API endpoint.
-
-Copyright (c) 2024 The MITRE Corporation. All rights reserved.
 """
 
 from enum import Enum

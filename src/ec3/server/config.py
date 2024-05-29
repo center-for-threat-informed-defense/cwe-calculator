@@ -1,7 +1,4 @@
-"""Constants used to configure the server's logging.
-
-Copyright (c) 2024 The MITRE Corporation. All rights reserved.
-"""
+"""Constants used to configure the server's logging."""
 
 from typing import Final
 

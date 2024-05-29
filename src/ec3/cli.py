@@ -7,7 +7,8 @@ This is the command line interface entry point for ec3. When called, it obtains 
 arguments from the command line and initializes the collector and calculator classes.
 When completed, it prints any results found.
 
-Copyright (c) 2024 The MITRE Corporation. All rights reserved.
+Copyright 2024 MITRE Engenuity. Approved for public release. Document number(s)
+PUT_PRS_NUMBER_HERE.
 """
 
 import argparse
@@ -415,21 +416,29 @@ def main(arg_list: list[str] | None = None) -> None:
             e=args.exploit_code_maturity if args.exploit_code_maturity else "X",
             rl=args.remediation_level if args.remediation_level else "X",
             rc=args.report_confidence if args.report_confidence else "X",
-            cr=args.confidentiality_requirement
-            if args.confidentiality_requirement
-            else "X",
+            cr=(
+                args.confidentiality_requirement
+                if args.confidentiality_requirement
+                else "X"
+            ),
             ir=args.integrity_requirement if args.integrity_requirement else "X",
             ar=args.availability_requirement if args.availability_requirement else "X",
             mav=args.modified_attack_vector if args.modified_attack_vector else "X",
-            mac=args.modified_attack_complexity
-            if args.modified_attack_complexity
-            else "X",
-            mpr=args.modified_privileges_required
-            if args.modified_privileges_required
-            else "X",
-            mui=args.modified_user_interaction
-            if args.modified_user_interaction
-            else "X",
+            mac=(
+                args.modified_attack_complexity
+                if args.modified_attack_complexity
+                else "X"
+            ),
+            mpr=(
+                args.modified_privileges_required
+                if args.modified_privileges_required
+                else "X"
+            ),
+            mui=(
+                args.modified_user_interaction
+                if args.modified_user_interaction
+                else "X"
+            ),
             ms=args.modified_scope if args.modified_scope else "X",
             mc=args.modified_confidentiality if args.modified_confidentiality else "X",
             mi=args.modified_integrity if args.modified_integrity else "X",

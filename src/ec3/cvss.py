@@ -7,11 +7,8 @@ Typical usage example:
     base_cvss = Cvss31.from_cve(cve=cve)
     // Update an environmental metric (e.g., modified confidentiality)
     base_cvss.set_mc("L")
-    base_score = base_cvss.get_base_score(),
-    base_cvss.
-    cvss_data.get_environmental_score(),
-
-Copyright (c) 2024 The MITRE Corporation. All rights reserved.
+    base_score = base_cvss.get_base_score()
+    base_cvss.get_environmental_score()
 """
 
 import logging
@@ -1149,9 +1146,13 @@ class Cvss31:
         base_score = (
             0
             if impact_score <= 0
-            else self.__roundup(min(impact_score + exploitability_score, 10))
-            if self.s == "U"
-            else self.__roundup(min(1.08 * (impact_score + exploitability_score), 10))
+            else (
+                self.__roundup(min(impact_score + exploitability_score, 10))
+                if self.s == "U"
+                else self.__roundup(
+                    min(1.08 * (impact_score + exploitability_score), 10)
+                )
+            )
         )
 
         return base_score
@@ -1261,25 +1262,28 @@ class Cvss31:
         environmental_score = (
             0
             if modified_impact_score <= 0
-            else self.__roundup(
+            else (
                 self.__roundup(
-                    min(modified_impact_score + modified_exploitability_score, 10)
-                )
-                * self.E_LOOKUP[self.e]
-                * self.RL_LOOKUP[self.rl]
-                * self.RC_LOOKUP[self.rc]
-            )
-            if (self.__get_modified_or_base(self.ms, self.s) == "U")
-            else self.__roundup(
-                self.__roundup(
-                    min(
-                        1.08 * (modified_impact_score + modified_exploitability_score),
-                        10,
+                    self.__roundup(
+                        min(modified_impact_score + modified_exploitability_score, 10)
                     )
+                    * self.E_LOOKUP[self.e]
+                    * self.RL_LOOKUP[self.rl]
+                    * self.RC_LOOKUP[self.rc]
                 )
-                * self.E_LOOKUP[self.e]
-                * self.RL_LOOKUP[self.rl]
-                * self.RC_LOOKUP[self.rc]
+                if (self.__get_modified_or_base(self.ms, self.s) == "U")
+                else self.__roundup(
+                    self.__roundup(
+                        min(
+                            1.08
+                            * (modified_impact_score + modified_exploitability_score),
+                            10,
+                        )
+                    )
+                    * self.E_LOOKUP[self.e]
+                    * self.RL_LOOKUP[self.rl]
+                    * self.RC_LOOKUP[self.rc]
+                )
             )
         )
 

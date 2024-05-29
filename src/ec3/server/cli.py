@@ -5,7 +5,8 @@ scores for provided CWE Identifiers.
 This is the command line interface entry point for ec3.server. When called, it obtains
 the arguments from the command line and initializes the server.
 
-Copyright (c) 2024 The MITRE Corporation. All rights reserved.
+Copyright 2024 MITRE Engenuity. Approved for public release. Document number(s)
+PUT_PRS_NUMBER_HERE.
 """
 
 import argparse

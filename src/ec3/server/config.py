@@ -3,7 +3,7 @@
 Copyright (c) 2024 The MITRE Corporation. All rights reserved.
 """
 
-from typing_extensions import Final
+from typing import Final
 
 __LOGFILE_PFX: Final[str] = "%(asctime)s [%(name)s] %(levelname)s:"
 LOGGING_FORMATTERS: Final[dict] = {

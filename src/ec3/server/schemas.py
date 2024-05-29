@@ -11,7 +11,12 @@ from pydantic import BaseModel
 
 
 class CweScore(BaseModel):
-    """CWE Score Result"""
+    """CWE Score Result
+
+    These default values serve to document a potential response from the API. The
+    example response can be seen under the `Responses` > `Example Value` section of the
+    `/docs` page.
+    """
 
     projected_cvss: float = 6.633333333333334
     cwe: int = 121

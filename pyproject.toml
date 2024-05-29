@@ -14,6 +14,9 @@ license = "Apache"
 python = "^3.10"
 nvdlib = "^0.7.6"
 ruff = "^0.3.3"
+uvicorn = "^0.29.0"
+fastapi = "^0.110.1"
+watchdog = "^4.0.0"
 
 [tool.poetry.group.dev.dependencies]
 bandit = "1.7.0"
@@ -25,9 +28,11 @@ mypy = "^1.2.0"
 types-requests = "^2.31.0.20240125"
 types-mock = "^5.1.0.20240106"
 mock = "^5.1.0"
+httpx = "^0.27.0"
 
 [tool.poetry.scripts]
 ec3-cli = "ec3.cli:main"
+ec3-server = "ec3.server.cli:main"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

@@ -276,11 +276,9 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
 
 def _setup_logging(verbose: bool = False) -> None:
     """Configure logging.
-
     Args:
         verbose: Boolean value representing whether to use the more verbose
             logging.DEBUG over the default logging.INFO
-
     Returns:
         None
     """

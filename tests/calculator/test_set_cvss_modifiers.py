@@ -2,12 +2,12 @@ def test_set_cvss_modifiers(example_calculator):
 
     # Default vector for calculation:
     # CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N/
-    assert example_calculator.calculate_results(125).get("Projected CVSS") == 7.5
+    assert example_calculator.calculate_results(125).get("projected_cvss") == 7.5
     example_calculator.set_cvss_modifiers(mav="P", cr="H")
 
     # Modified vector for calculation:
     # CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N/CR:H/MAV:P
-    assert example_calculator.calculate_results(125).get("Projected CVSS") == 6.4
+    assert example_calculator.calculate_results(125).get("projected_cvss") == 6.4
 
 
 def test_set_cvss_modifiers_all(example_calculator):
@@ -32,4 +32,4 @@ def test_set_cvss_modifiers_all(example_calculator):
         mi="L",
         ma="L",
     )
-    assert example_calculator.calculate_results(125).get("Projected CVSS") == 4.1
+    assert example_calculator.calculate_results(125).get("projected_cvss") == 4.1

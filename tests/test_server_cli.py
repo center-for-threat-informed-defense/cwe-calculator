@@ -113,7 +113,7 @@ def example_args(
 
 
 @pytest.fixture
-def test_client(example_vulnerability_file: str, example_normalization_file: str):
+def example_client(example_vulnerability_file: str, example_normalization_file: str):
     app = ec3.server.cli.instantiate_ec3_service(
         example_vulnerability_file, example_normalization_file
     )
@@ -134,8 +134,8 @@ def test_args_simple(
     assert os.path.samefile(args.normalize_file, example_normalization_file)
 
 
-def test_server_score_not_normalized(test_client: TestClient):
-    response = test_client.get("/score/121?normalize=false")
+def test_server_score_not_normalized(example_client: TestClient):
+    response = example_client.get("/score/121?normalize=false")
     json = response.json()
     records = set(json["cve_records"])
     assert response.status_code == 200
@@ -152,8 +152,8 @@ def test_server_score_not_normalized(test_client: TestClient):
     assert "CVE-2023-49907" in records
 
 
-def test_server_score_normalized(test_client: TestClient):
-    response = test_client.get("/score/121?normalize=true")
+def test_server_score_normalized(example_client: TestClient):
+    response = example_client.get("/score/121?normalize=true")
     json = response.json()
     assert response.status_code == 200
     assert json["projected_cvss"] == 0

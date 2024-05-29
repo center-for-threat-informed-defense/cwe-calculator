@@ -1,12 +1,12 @@
-# """
-# The Environmental CWE CVSS Calculator (ec3) Server is used to calculate potential CVSS
-# scores for provided CWE Identifiers.
-#
-# This is the command line interface entry point for ec3.server. When called, it obtains
-# the arguments from the command line and initializes the server.
-#
-# Copyright (c) 2024 The MITRE Corporation. All rights reserved.
-# """
+"""
+The Environmental CWE CVSS Calculator (ec3) Server is used to calculate potential CVSS
+scores for provided CWE Identifiers.
+
+This is the command line interface entry point for ec3.server. When called, it obtains
+the arguments from the command line and initializes the server.
+
+Copyright (c) 2024 The MITRE Corporation. All rights reserved.
+"""
 
 import argparse
 import logging

@@ -6,8 +6,6 @@ Typical usage example:
     source_collector = ec3.collector.NvdCollector()
     api_data = source_collector.pull_target_data()
     source_collector.save_data_to_file(api_data)
-
-Copyright (c) 2024 The MITRE Corporation. All rights reserved.
 """
 
 import logging

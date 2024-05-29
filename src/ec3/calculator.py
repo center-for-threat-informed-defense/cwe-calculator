@@ -8,8 +8,6 @@ Typical usage example:
     ec3_calc = ec3.calculator.Cvss31Calculator()
     example_results = ec3_calc.calculate_results(125)
     ec3_calc.output_results(example_results)
-
-Copyright (c) 2024 The MITRE Corporation. All rights reserved.
 """
 
 import collections

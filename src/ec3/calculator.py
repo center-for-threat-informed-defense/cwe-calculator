@@ -382,7 +382,7 @@ class Cvss31Calculator:
             normalization_file_str = normalization_default_file
 
         try:
-            new_normalization_data: list[list] = self.parse_normalization_file(
+            new_normalization_data = self.parse_normalization_file(
                 file_str=normalization_file_str
             )
             self.set_normalization_data(new_normalization_data)

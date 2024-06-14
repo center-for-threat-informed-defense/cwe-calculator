@@ -1,5 +1,5 @@
 """
-The Environmental CWE CVSS Calculator (ec3) Server is used to calculate potential CVSS
+The CWE with Environmental CVSS Calculator Server is used to calculate potential CVSS
 scores for provided CWE Identifiers.
 
 This is the command line interface entry point for ec3.server. When called, it obtains
@@ -42,7 +42,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
     """
 
     parser = argparse.ArgumentParser(
-        description="Environmental CWE CVSS Calculator Server"
+        description="CWE with Environmental CVSS Calculator Server"
     )
     parser.add_argument(
         "--data-file",
@@ -96,8 +96,8 @@ def instantiate_ec3_service(data_file_str: str, normalize_file_str: str) -> Fast
 
     # Initialize FastAPI instance
     app = FastAPI(
-        title="Environmental CWE CVSS Calculator (ec3) Server",
-        summary="The Environmental CWE CVSS Calculator (ec3) is used to calculate a "
+        title="CWE with Environmental CVSS Calculator Server",
+        summary="The CWE with Environmental CVSS Calculator is used to calculate a "
         "potential CVSS score for a provided CWE Identifier.",
         version="1.0.0",
         license_info={
@@ -200,7 +200,7 @@ def main(arg_list: list[str] | None = None) -> None:
     logger = logging.getLogger(__name__)
 
     print()  # Print blank line to stdout
-    logger.info("*** Environmental CWE CVSS Server (ec3) ***")
+    logger.info("*** Environmental CWE CVSS Server ***")
     print()
     logger.debug(f"Input arguments: {args}")
 

@@ -1,7 +1,7 @@
 """
-The Environmental CWE CVSS Calculator (ec3) is used to calculate a potential CVSS score
-for a provided CWE Identifier. Data from the National Vulnerability Database(NVD) is
-pulled via the 2.0 API and stored for later re-use.
+The CWE with Environmental CVSS Calculator is used to calculate an estimated severity
+score for a provided CWE identifier. Data from the National Vulnerability Database(NVD)
+is pulled via the 2.0 API and cached for re-use.
 
 This is the command line interface entry point for ec3. When called, it obtains the
 arguments from the command line and initializes the collector and calculator classes.
@@ -91,7 +91,9 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         An argparse.Namespace object holding all attributes provided.
     """
 
-    parser = argparse.ArgumentParser(description="Environmental CWE CVSS Calculator")
+    parser = argparse.ArgumentParser(
+        description="CWE with Environmental CVSS Calculator"
+    )
     globals_parser = argparse.ArgumentParser(description="Global ec3 parameters")
 
     subparsers = parser.add_subparsers(
@@ -323,7 +325,7 @@ def main(arg_list: list[str] | None = None) -> None:
     logger = logging.getLogger(__name__)
 
     print()  # Print blank line to stdout
-    logger.info("*** Environmental CWE CVSS Calculator (ec3) ***")
+    logger.info("*** CWE with Environmental CVSS Calculator ***")
     print()
     logger.debug(f"Input arguments: {args}")
 

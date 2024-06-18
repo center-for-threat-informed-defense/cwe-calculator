@@ -22,12 +22,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for Docker - analysis image
+      - name: Extract docker metadata
         id: meta_analysis
         uses: docker/metadata-action@v3
         with:
           images: |
-            ghcr.io/${{ github.repository }}-analysis
+            ghcr.io/${{ github.repository }}
           labels: |
             org.opencontainers.image.url=https://ctid.mitre-engenuity.org/
 

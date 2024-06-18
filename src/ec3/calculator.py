@@ -685,36 +685,28 @@ class Cvss31Calculator:
                 cwe_id = normalization_result
 
         if self.__cwe_id_valid(cwe_id):
-            score_values: list[list[float]] = []
+            score_values: list[float] = []
             cve_ids: list[str] = []
             if self.cwe_data[cwe_id]:
                 for [cve_id, cvss_data] in self.cwe_data[cwe_id]:
-                    scores = [
-                        cvss_data.get_base_score(),
-                        cvss_data.get_environmental_score(),
-                    ]
-                    score_values.append(scores)
+                    score_values.append(cvss_data.get_environmental_score())
                     cve_ids.append(cve_id)
 
                 results_stdev: float = 0.0
                 if len(score_values) > 1:
-                    results_stdev = statistics.stdev([item[0] for item in score_values])
+                    results_stdev = statistics.stdev(score_values)
 
                 # Create an output format with all required information
                 # score_values holds [base, environmental] calculated scores
                 # self.cwe_data is a dict that holds a list of [cve_id, Cvss31] list
                 # entries indexed by the CWE ID
                 calculator_results: dict = {
-                    "projected_cvss": statistics.mean(
-                        [item[1] for item in score_values]
-                    ),
+                    "projected_cvss": statistics.mean(score_values),
                     "cwe": cwe_id,
                     "count": len(self.cwe_data[cwe_id]),
-                    "min_cvss_base_score": min([item[0] for item in score_values]),
-                    "max_cvss_base_score": max([item[0] for item in score_values]),
-                    "avg_cvss_base_score": statistics.mean(
-                        [item[0] for item in score_values]
-                    ),
+                    "min_cvss_base_score": min(score_values),
+                    "max_cvss_base_score": max(score_values),
+                    "avg_cvss_base_score": statistics.mean(score_values),
                     "std_dev_cvss_base_score": results_stdev,
                     "cve_records": cve_ids,
                 }

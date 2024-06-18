@@ -1,0 +1,41 @@
+name: Create Docker Image
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  push_to_registries:
+    name: Push Docker image to multiple registries if necessary
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker - analysis image
+        id: meta_analysis
+        uses: docker/metadata-action@v3
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}-analysis
+          labels: |
+            org.opencontainers.image.url=https://ctid.mitre-engenuity.org/
+
+      - name: Build and push docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ steps.meta_analysis.outputs.tags }}
+          labels: ${{ steps.meta_analysis.outputs.labels }}

@@ -58,6 +58,7 @@ def parse_args(arg_list: list[str] | None) -> argparse.Namespace:
         action="store",
         type=pathlib.Path,
     )
+    parser.add_argument("--host", help="IP address to listen on", default="localhost")
     parser.add_argument(
         "--verbose", "-v", help="Flag to enable verbose logging.", action="store_true"
     )
@@ -206,6 +207,7 @@ def main(arg_list: list[str] | None = None) -> None:
 
     # Start Uvicorn ASGI web server
     uvicorn.run(
+        host=args.host,
         app=instantiate_ec3_service(args.data_file, args.normalize_file),
         log_config=UVICORN_LOGGING_CONFIG,
     )

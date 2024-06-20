@@ -6,9 +6,6 @@ is pulled via the 2.0 API and cached for re-use.
 This is the command line interface entry point for ec3. When called, it obtains the
 arguments from the command line and initializes the collector and calculator classes.
 When completed, it prints any results found.
-
-Copyright 2024 MITRE Engenuity. Approved for public release. Document number(s)
-PUT_PRS_NUMBER_HERE.
 """
 
 import argparse
